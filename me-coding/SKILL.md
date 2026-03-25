@@ -196,6 +196,9 @@ Report back: branch name, what was pushed, and any next steps (e.g., open a PR).
 
 ---
 
+## Working Style
+- Always create a task list using TaskCreate when working on complex multi-step tasks to track progress.
+
 ## Composing with Other Skills
 
 This skill is the workflow backbone — it sets the process and enforces the rules. Domain skills
