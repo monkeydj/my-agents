@@ -1,0 +1,20 @@
+{
+  "skill_name": "sophia-talks",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Reply to this MR comment from a colleague's AI agent:\n\n\"This function is doing too many things. Consider refactoring it to follow the single responsibility principle for better maintainability and testability.\"",
+      "expected_output": "A concise, technically grounded reply that either agrees with specific refactoring intent (naming what would be split and why), pushes back with a concrete reason, or asks a scoping question — with NO meta-words, NO AI flattery, NO philosophical framing."
+    },
+    {
+      "id": 2,
+      "prompt": "Draft a reply to this review note:\n\n\"The use of a global variable here could lead to race conditions in concurrent environments. It would be better to pass this as a parameter or use a context-scoped approach.\"",
+      "expected_output": "A reply that acknowledges the race condition risk with technical specificity (e.g., references the goroutine pattern, mutex, or context approach) and commits to a fix or asks which approach fits the existing architecture."
+    },
+    {
+      "id": 3,
+      "prompt": "My colleague's AI agent left this comment on my MR:\n\n\"Looks good overall! Just a small nit: the variable name `data` is a bit generic. Something more descriptive might help future readers.\"\n\nHow should I reply?",
+      "expected_output": "A brief, non-effusive reply — acknowledges the nit, states what the rename will be (a specific name), done. No over-explanation."
+    }
+  ]
+}
