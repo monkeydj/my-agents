@@ -82,7 +82,7 @@ colour_remain() {
   local remain="$1"
   if   (( remain <= 20 )); then printf "\033[1;31m%d%%\033[0m" "$remain"
   elif (( remain <= 50 )); then printf "\033[1;33m%d%%\033[0m" "$remain"
-  else printf "\033[0;37m%d%%\033[0m"; fi
+  else printf "\033[0;37m%d%%\033[0m" "$remain"; fi
 }
 
 # Format large token counts: 1M+ = "1.5M", 1K+ = "1.2K", else raw number
@@ -268,7 +268,7 @@ fi
 
 net_plain=""; net_colored=""
 if [ -n "$net_iface" ]; then
-  net_plain="${net_iface}"
+  net_plain="⇌ ${net_iface}"
   [ -n "$net_ip" ] && net_plain+=" ${net_ip}"
   # VPN interfaces: utun*, tun*, wg*, ppp*, tailscale*
   case "$net_iface" in
@@ -302,7 +302,7 @@ l1_left_colored="${net_colored}"
 branch_part="${branch:+⎇ ${branch}  }"
 max_path_len=$(( TERM_W - ${#l1_left_plain} - ${#branch_part} - 2 ))
 if [ -n "$short_cwd" ] && (( max_path_len > 5 )) && (( ${#short_cwd} > max_path_len )); then
-  short_cwd="…${short_cwd: -$(( max_path_len - 1 ))}"
+  short_cwd="…${short_cwd: -$(( max_path_len - 3 ))}"
 fi
 
 l1_right_plain="${branch_part}${short_cwd}"
