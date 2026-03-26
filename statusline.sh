@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Claude Code Status Line — One-liner Session Monitor with Pac-Man Bar
+# Claude Code Status Line — Two-Line Session Monitor with Pac-Man Bar
 # =============================================================================
 # Dependencies: jq, bc
 #
-# ⎇ branch  ~/path  [pac-man bar]  ctx:43%  ᗩ5h:82%↓3h  ᗩ7d:62%↓3d  ↓in/↑out  Model@session  ⇌ iface ip
+# Line 1: ⎇ branch  ~/short/path  Model@session  ⇌ iface ip
+# Line 2: [pac-man bar fills terminal width]  ctx:43%  5h:ᗩ82%↓3h  7d:ᗩ62%↓3d  ↓in/↑out
 # =============================================================================
 
 set -euo pipefail
@@ -149,18 +150,10 @@ in_fmt=$(fmt_tokens "$in_tokens"); out_fmt=$(fmt_tokens "$out_tokens")
 tokens_plain="↓${in_fmt}/↑${out_fmt}"
 
 stats_plain="ctx:${ctx_remain}%"
-[ -n "$five_pct" ] && { stats_plain+="  ᗩ5h:${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↓${five_rs}"; }
-[ -n "$week_pct" ] && { stats_plain+="  ᗩ7d:${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↓${week_rs}"; }
+[ -n "$five_pct" ] && { stats_plain+="  5h:ᗩ${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↺${five_rs}"; }
+[ -n "$week_pct" ] && { stats_plain+="  7d:ᗩ${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↺${week_rs}"; }
 
 model_session_plain="${model:-}@${session}"
-
-# Right side total: 4 segments (stats tokens model_session net) + separators
-# 3 separators between them (2 chars each) + 2 chars gap before bar = 8 total
-right_fixed=$(( ${#stats_plain} + ${#tokens_plain} + ${#model_session_plain} + ${#net_plain} + 8 ))
-
-# Left budget for: branch + separator + path + separator + bar
-left_budget=$(( TERM_W - right_fixed ))
-(( left_budget < 30 )) && left_budget=30
 
 # Branch: cap at 35 visible chars (⎇ + space + name)
 branch_display=""
@@ -177,15 +170,18 @@ fi
 # Separator cost only if branch is present
 branch_sep=0; (( ${#branch_plain} > 0 )) && branch_sep=2
 
-# Path: remaining after branch + separator, preserving min 10 chars for bar + separator
-path_budget=$(( left_budget - ${#branch_plain} - branch_sep - 10 - 2 ))
+# Path budget for line 1: leave room for model@session and net
+# net_len includes its 2-space separator; -2 for spaces between path and model@session
+net_len=0; [ -n "$net_plain" ] && net_len=$(( ${#net_plain} + 2 ))
+path_budget=$(( TERM_W - ${#branch_plain} - branch_sep - 2 - ${#model_session_plain} - net_len ))
 (( path_budget < 5 )) && path_budget=5
 if [ -n "$short_cwd" ] && (( ${#short_cwd} > path_budget )); then
   short_cwd="…${short_cwd: -$(( path_budget - 1 ))}"
 fi
 
-# Bar width: whatever remains after branch + path + their separators
-bar_w=$(( left_budget - ${#branch_plain} - branch_sep - ${#short_cwd} - 2 ))
+# Bar width for line 2: "[" + bar + "]" + "  " + stats + "  " + tokens = TERM_W
+# -6 = "[" + "]" + "  " (after "]") + "  " (between stats and tokens)
+bar_w=$(( TERM_W - ${#stats_plain} - ${#tokens_plain} - 6 ))
 (( bar_w < 10 )) && bar_w=10
 
 MAP_W=$bar_w
@@ -299,16 +295,16 @@ branch_colored=""
 path_colored="${GRY}${short_cwd}${NC}"
 
 ctx_c=$(colour_remain "$ctx_remain")
-stats_colored="\033[2mctx\033[0m:${ctx_c}"
+stats_colored="\033[1;33m${PAC_CHAR}:${ctx_c}"
 if [ -n "$five_pct" ]; then
   five_c=$(colour_remain "$five_remain")
-  stats_colored+="  \033[1;31mᗩ\033[0m\033[2m5h\033[0m:${five_c}"
-  [ -n "$five_rs" ] && stats_colored+="\033[2m↓${five_rs}\033[0m"
+  stats_colored+="  \033[2m5h\033[0m\033[1;31m${G1_CHAR}:\033[0m${five_c}"
+  [ -n "$five_rs" ] && stats_colored+="\033[2m↺${five_rs}\033[0m"
 fi
 if [ -n "$week_pct" ]; then
   week_c=$(colour_remain "$week_remain")
-  stats_colored+="  \033[1;35mᗩ\033[0m\033[2m7d\033[0m:${week_c}"
-  [ -n "$week_rs" ] && stats_colored+="\033[2m↓${week_rs}\033[0m"
+  stats_colored+="  \033[2m7d\033[0m\033[1;35m${G2_CHAR}:\033[0m${week_c}"
+  [ -n "$week_rs" ] && stats_colored+="\033[2m↺${week_rs}\033[0m"
 fi
 
 tokens_colored="${BLD}↓${in_fmt}/↑${out_fmt}${NC}"
@@ -316,10 +312,17 @@ tokens_colored="${BLD}↓${in_fmt}/↑${out_fmt}${NC}"
 model_session_colored="${W}${model:-}${NC}${GRY}@${session}${NC}"
 
 # =============================================================================
-# SECTION: Output (single line)
+# SECTION: Output (two lines)
 # =============================================================================
-line=""
-[ -n "$branch_colored" ] && line+="${branch_colored}  "
-line+="${path_colored}  ${game}  ${stats_colored}  ${tokens_colored}  ${model_session_colored}"
-[ -n "$net_colored" ] && line+="  ${net_colored}"
-echo -e "$line"
+
+# --- Line 1: branch  path  model@session  net ---
+line1=""
+[ -n "$branch_colored" ] && line1+="${branch_colored}  "
+line1+="${path_colored}  ${model_session_colored}"
+[ -n "$net_colored" ] && line1+="  ${net_colored}"
+
+# --- Line 2: [pacman bar]  ctx%  5h  7d  tokens ---
+line2="[${game}]  ${stats_colored}  ${tokens_colored}"
+
+echo -e "$line1"
+echo -e "$line2"
