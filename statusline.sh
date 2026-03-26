@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
-# Claude Code status line — Pac-Man + context (combined)
-# Line 1: git repo · branch | model | ~/path
-# Line 2: CLAUDE v…   model ctx-size ᗧontext XX% left
-# Line 3-5: Pac-Man map (context window chase)
-# Line 6: session  ↓in/↑out  ᗩ 7d XX%  ᗩ 5h XX%
+# =============================================================================
+# Claude Code Status Line — Session Monitor with Pac-Man Visualization
+# =============================================================================
+# Dependencies: jq, bc
+#
+# Line 1: [network] repo ⎇ branch ............... ~/path
+# Line 2: CLAUDE vX.X.X  Model  ContextSize  ᗧontext XX% left
+# Line 3: ╭─[Pac-Man game: context window chase]─╮
+# Line 4: ║ ᗩ/ᗣ ▌ ································ ║
+# Line 5: ╰───────────────────────────────────────╯
+# Line 6: sessionID  ↓in/↑out  ᗩ 7d XX%  ᗩ 5h XX%
+# =============================================================================
+
+set -euo pipefail
+
+# Check dependencies
+command -v jq >/dev/null 2>&1 || { echo "Error: jq required" >&2; exit 1; }
+command -v bc >/dev/null 2>&1 || { echo "Error: bc required" >&2; exit 1; }
 
 input=$(cat)
 
-# ── chomp state ───────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Pac-Man Animation State
+# =============================================================================
+# Toggles between mouth open/closed for animation effect
 CHOMP_FILE="/tmp/.claude-pacman-chomp"
 if [ -f "$CHOMP_FILE" ] && [ "$(cat "$CHOMP_FILE")" = "1" ]; then
   PAC_CHAR="●"; G1_CHAR="ᗩ"; G2_CHAR="ᗣ"; echo "0" > "$CHOMP_FILE"
@@ -15,12 +31,18 @@ else
   PAC_CHAR="ᗧ"; G1_CHAR="ᗣ"; G2_CHAR="ᗩ"; echo "1" > "$CHOMP_FILE"
 fi
 
-# ── colours ───────────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Color Definitions
+# =============================================================================
+# B=Blue, Y=Yellow, R=Red, P=Purple, O=Orange, W=White, GRY=Gray, CYN=Cyan
+# DIM=Dim, BLD=Bold, NC=No Color
 B='\033[38;5;27m'; Y='\033[1;33m'; R='\033[1;31m'; P='\033[1;35m'
 O='\033[38;5;208m'; W='\033[0;37m'; DIM='\033[2m'; NC='\033[0m'
 GRY='\033[0;90m'; CYN='\033[0;36m'; BLD='\033[1;37m'
 
-# ── extract fields ────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Parse JSON Input
+# =============================================================================
 ctx_pct=$(echo "$input"    | jq -r '.context_window.used_percentage // "0"')
 five_pct=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
 five_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
@@ -32,13 +54,19 @@ version=$(echo "$input"    | jq -r '.version // empty')
 cwd=$(echo "$input"        | jq -r '.workspace.current_dir // .cwd // ""')
 in_tokens=$(echo "$input"  | jq -r '.context_window.total_input_tokens // 0')
 out_tokens=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
-session=$(echo "$input"    | jq -r '.session_id // ""')
+session_full=$(echo "$input" | jq -r '.session_id // ""')
+session="${session_full:0:8}"  # Truncate to 8 chars for display
 
+# Convert percentages to integers
 ctx_int=$(printf "%.0f" "$ctx_pct" 2>/dev/null || echo 0)
 five_int=$(printf "%.0f" "${five_pct:-0}" 2>/dev/null || echo 0)
 week_int=$(printf "%.0f" "${week_pct:-0}" 2>/dev/null || echo 0)
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Helper Functions
+# =============================================================================
+
+# Format Unix timestamp to human-readable countdown (e.g., "2d3h", "4h30m")
 fmt_reset() {
   local ts="$1"; [ -z "$ts" ] && return
   local now; now=$(date +%s); local diff=$(( ts - now ))
@@ -49,13 +77,15 @@ fmt_reset() {
   else printf "%dm" "$m"; fi
 }
 
+# Color percentage based on urgency: <=20% red, <=50% yellow, else white
 colour_remain() {
   local remain="$1"
   if   (( remain <= 20 )); then printf "\033[1;31m%d%%\033[0m" "$remain"
   elif (( remain <= 50 )); then printf "\033[1;33m%d%%\033[0m" "$remain"
-  else printf "\033[0;37m%d%%\033[0m" "$remain"; fi
+  else printf "\033[0;37m%d%%\033[0m"; fi
 }
 
+# Format large token counts: 1M+ = "1.5M", 1K+ = "1.2K", else raw number
 fmt_tokens() {
   local t="$1"; [ -z "$t" ] && return
   if (( t >= 1000000000 )); then printf "%.1fG" "$(echo "$t / 1000000000" | bc -l)"
@@ -64,32 +94,39 @@ fmt_tokens() {
   else printf "%d" "$t"; fi
 }
 
+# Generate horizontal line of box-drawing characters
 rep_hline() {
   local n=$1 s=""
   for (( i=0; i<n; i++ )); do s+="\033[38;5;27m═\033[0m"; done
   printf "%s" "$s"
 }
 
-# ── map config ────────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Map Configuration & Game State
+# =============================================================================
+# Legend: Pac-Man (ᗧ/●) = context usage, Ghost ᗩ = 5h rate, Ghost ᗣ = 7d rate
+# ============================================================================
+
 PAD=1
 TERM_W=$(tput cols 2>/dev/null || echo 80)
-MAP_W=$(( TERM_W - 2 - PAD * 2 ))   # fill terminal: subtract borders + padding
-(( MAP_W < 20 )) && MAP_W=20         # minimum playable width
+MAP_W=$(( TERM_W - 2 - PAD * 2 ))
+(( MAP_W < 20 )) && MAP_W=20
 TOTAL_W=$TERM_W
 
-# ── remaining values ──────────────────────────────────────────────────────────
+# Calculate remaining percentages
 ctx_remain=$(( 100 - ctx_int )); (( ctx_remain < 0 )) && ctx_remain=0
 five_remain=$(( 100 - five_int )); (( five_remain < 0 )) && five_remain=0
 week_remain=$(( 100 - week_int )); (( week_remain < 0 )) && week_remain=0
 five_rs=$(fmt_reset "$five_reset")
 week_rs=$(fmt_reset "$week_reset")
 
-# ── positions ─────────────────────────────────────────────────────────────────
+# Calculate Pac-Man position based on context usage
 PAC_MIN=12
 pac_pos=$(( PAC_MIN + ctx_int * (MAP_W - 1 - PAC_MIN) / 100 ))
 (( pac_pos < PAC_MIN )) && pac_pos=$PAC_MIN
 (( pac_pos >= MAP_W )) && pac_pos=$(( MAP_W - 1 ))
 
+# Determine ghost positions based on rate limits
 g1=-1; g2=-1; game_over=0
 g2_caged=0
 
@@ -133,7 +170,9 @@ if (( game_over == 0 )); then
   (( g2 >= 0 && g2 == pac_pos && pac_pos > 0 )) && g2=$(( pac_pos - 1 ))
 fi
 
-# ── build game line ───────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Build Pac-Man Visualization Line
+# =============================================================================
 go_text=" GAME OVER"
 go_start=-1
 if (( game_over )); then
@@ -178,12 +217,16 @@ for (( i=ROOM_W; i<MAP_W; i++ )); do
   fi
 done
 
-# ── border lines ──────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Build Box Borders
+# =============================================================================
 hline_w=$(( MAP_W + PAD * 2 ))
 top_border="${B}╭${NC}$(rep_hline $hline_w)${B}╮${NC}"
 bot_border="${B}╰${NC}$(rep_hline $hline_w)${B}╯${NC}"
 
-# ── CLAUDE header (line 2) ────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Line 2 — CLAUDE Header
+# =============================================================================
 ctx_size=$(fmt_tokens "$ctx_total")
 ctx_c=$(colour_remain "$ctx_remain")
 
@@ -207,7 +250,10 @@ right_colored=""
 [ -n "$ctx_size" ] && right_colored+="\033[2m${ctx_size}\033[0m "
 right_colored+="\033[1;33mᗧ\033[0m\033[2montext\033[0m ${ctx_c} \033[2mleft\033[0m"
 
-# ── network interface (local, no external call) ───────────────────────────────
+# =============================================================================
+# SECTION: Network Interface Detection
+# =============================================================================
+# Supports macOS (route, ipconfig) and Linux (ip route)
 net_iface=$(route get default 2>/dev/null | awk '/interface:/{print $2}')
 if [ -z "$net_iface" ]; then
   net_iface=$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')
@@ -237,7 +283,9 @@ if [ -n "$net_iface" ]; then
   esac
 fi
 
-# ── git + path line (line 1) ──────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Line 1 — Git Info & Path
+# =============================================================================
 short_cwd=$(echo "$cwd" | sed "s|^$HOME|~|")
 
 repo=""; branch=""
@@ -246,11 +294,11 @@ if [ -n "$cwd" ] && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&
   branch=$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null)
 fi
 
-# left: net_info  repo ⎇ branch
+# Left: [network] repo ⎇ branch
 l1_left_plain="${net_plain}"
 l1_left_colored="${net_colored}"
 
-# right side: ⎇ branch  ~/path — truncate path if it won't fit
+# Right: ⎇ branch  ~/path (with truncation if needed)
 branch_part="${branch:+⎇ ${branch}  }"
 max_path_len=$(( TERM_W - ${#l1_left_plain} - ${#branch_part} - 2 ))
 if [ -n "$short_cwd" ] && (( max_path_len > 5 )) && (( ${#short_cwd} > max_path_len )); then
@@ -264,7 +312,9 @@ l1_gap=$(( TERM_W - ${#l1_left_plain} - ${#l1_right_plain} ))
 (( l1_gap < 1 )) && l1_gap=1
 l1_gap_pad=$(printf "%*s" "$l1_gap" "")
 
-# ── footer line (line 6) ──────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Line 6 — Footer (Session & Rate Limits)
+# =============================================================================
 in_fmt=$(fmt_tokens "$in_tokens")
 out_fmt=$(fmt_tokens "$out_tokens")
 
@@ -297,16 +347,14 @@ f_gap=$(( TERM_W - ${#f_left_plain} - ${#f_right_plain} ))
 (( f_gap < 1 )) && f_gap=1
 f_gap_pad=$(printf "%*s" "$f_gap" "")
 
-# ── output ────────────────────────────────────────────────────────────────────
+# =============================================================================
+# SECTION: Output
+# =============================================================================
 gap_pad=$(printf "%*s" "$gap" "")
 
-# Line 1: git repo ⎇ branch <gap> model  ~/path
 echo -e "${l1_left_colored}${l1_gap_pad}${l1_right_colored}"
-# Line 2: CLAUDE version <gap> model ctx% left
 echo -e "${left_colored}${gap_pad}${right_colored}"
-# Lines 3–5: Pac-Man map
 echo -e "$top_border"
 echo -e "${B}║${NC} ${game} ${B}║${NC}"
 echo -e "$bot_border"
-# Line 6: session <gap> ↓in/↑out  ᗩ 7d%  ᗩ 5h%
 echo -e "${f_left_colored}${f_gap_pad}${f_right_colored}"
