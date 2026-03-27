@@ -192,10 +192,10 @@ Use **conventional commits** with the ticket ID in the scope position:
 **Examples:**
 ```
 feat(BP-1234): add rate limiting middleware to API gateway
-fix(BP-5678): handle null response from payment provider
-chore(BP-9012): upgrade deps to address CVE-2024-1234
-migration(BP-3456): add user_preferences column to accounts table
-refactor(BP-7890): extract auth logic into dedicated service
+fix(GG-5678): handle null response from payment provider
+chore(DRM-9012): upgrade deps to address CVE-2024-1234
+migration(DATA-3456): add user_preferences column to accounts table
+refactor(ARB-7890): extract auth logic into dedicated service
 ```
 
 If no ticket ID was provided, use a descriptive scope: `feat(auth): ...`
