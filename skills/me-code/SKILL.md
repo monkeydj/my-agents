@@ -115,6 +115,21 @@ Execute the confirmed plan, task by task. As you work:
 | Building UI components or frontend pages     | `frontend-design`                          |
 | Integrating with Claude API / Anthropic SDK  | `claude-api`                               |
 
+**Python projects — detect and activate the virtual environment before running any tooling.**
+
+Check in this order and use the first match:
+
+| Signal | Activation |
+|---|---|
+| `poetry.lock` present | prefix all commands with `poetry run` (e.g., `poetry run pytest`) |
+| `Pipfile` present | prefix all commands with `pipenv run` |
+| `uv.lock` or `.python-version` + `uv` in PATH | prefix with `uv run` |
+| `.venv/` or `venv/` directory present | `source .venv/bin/activate` (or `venv/bin/activate`) once, then run commands bare |
+| `requirements*.txt` only, no manager | `source .venv/bin/activate` if the directory exists; otherwise warn the user that no venv was found and ask how they manage the environment |
+
+Never invoke `python`, `pip`, `pytest`, `flask`, `django-admin`, or any project CLI tool as a
+bare global command in a Python project — always go through the environment manager or activated venv.
+
 Read surrounding code before writing new code — match the project's naming conventions, error
 handling style, and patterns. Don't introduce patterns that are foreign to the codebase.
 
@@ -143,6 +158,9 @@ that already has conventions.
 ---
 
 ## Phase 5: Run Tests & Fix Failures
+
+For Python projects, ensure the virtual environment is active before running any command
+(see the environment detection table in Phase 3).
 
 Run the full test suite. If you don't know the test command, check in order:
 - `package.json` → `scripts.test`
@@ -193,6 +211,37 @@ git push -u origin <current-branch>
 ```
 
 Report back: branch name, what was pushed, and any next steps (e.g., open a PR).
+
+---
+
+---
+
+## Technical Domain References
+
+During **Phase 3**, detect which references apply to the current repo and read them before writing
+any code. Match the existing code style first, then apply the referenced patterns where absent or
+clearly needed.
+
+**Detection — load references based on what you find in the repo:**
+
+| Signal in repo | References to load |
+|---|---|
+| `manage.py` or `django` in `requirements*.txt` / `pyproject.toml` | Language — Python + Framework — Django |
+| `flask` in `requirements*.txt` / `pyproject.toml` | Language — Python + Framework — Flask |
+| `pyproject.toml`, `requirements*.txt`, or `*.py` files (no Django/Flask) | Language — Python |
+| `package.json` with `"type": "module"` or CJS project, no frontend framework | Language — JavaScript / Node.js |
+| Any of the above | Principles — Design Patterns + Principles — Error Handling (always) |
+
+**Reference index:**
+
+| Domain | File |
+|---|---|
+| Language — Python | [`references/language-python.md`](references/language-python.md) |
+| Language — JavaScript / Node.js | [`references/language-javascript-nodejs.md`](references/language-javascript-nodejs.md) |
+| Framework — Django | [`references/framework-django.md`](references/framework-django.md) |
+| Framework — Flask | [`references/framework-flask.md`](references/framework-flask.md) |
+| Principles — Design Patterns | [`references/principles-design-patterns.md`](references/principles-design-patterns.md) |
+| Principles — Error Handling | [`references/principles-error-handling.md`](references/principles-error-handling.md) |
 
 ---
 
