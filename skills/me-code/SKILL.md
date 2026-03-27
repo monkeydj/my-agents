@@ -209,7 +209,7 @@ adding or fixing tests for code that was already committed previously.
 
 ---
 
-## Phase 7: Push
+## Phase 7: Push & Report MR
 
 > **Mandatory.** Push immediately after committing. Do not wait for the user to ask. The workflow
 > is not complete until the branch is on the remote.
@@ -220,7 +220,19 @@ Push to the current branch. Confirm it is not `main`, `master`, or `release-*` f
 git push -u origin <current-branch>
 ```
 
-Report back: branch name, what was pushed, and any next steps (e.g., open a PR).
+After pushing, **always print the current branch name**. Then check for an existing MR on this branch:
+
+- If an MR exists: print its URL prominently as the final output line.
+- If no MR exists: **create a Draft MR automatically** using the GitLab MCP tool (`mcp__gitlab__create_merge_request`). Set `draft: true`. The user will open/ready it manually when ready. Print the newly created MR URL.
+
+**End-of-workflow output format (always):**
+
+```
+Branch: <current-branch>
+MR: <MR URL>
+```
+
+Never omit this block. It is the final line of the workflow.
 
 ---
 
