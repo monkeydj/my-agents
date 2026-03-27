@@ -1,0 +1,29 @@
+{
+  "name": "duy-ton-skills",
+  "owner": {
+    "name": "duy.ton"
+  },
+  "metadata": {
+    "description": "Personal skill marketplace — coding workflows, MR replies, and more.",
+    "version": "0.1.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "meengine",
+      "source": "./plugins/meengine",
+      "description": "All-in-one skill bundle — coding workflows, MR replies, and more.",
+      "version": "0.1.0",
+      "author": {
+        "name": "duy.ton"
+      },
+      "category": "productivity",
+      "keywords": [
+        "coding",
+        "workflow",
+        "code-review",
+        "all-in-one"
+      ]
+    }
+  ]
+}

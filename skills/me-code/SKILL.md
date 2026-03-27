@@ -1,5 +1,5 @@
 ---
-name: me-coding
+name: me-code
 description: >
   Personalized incremental coding workflow skill that orchestrates the full development cycle per project.
   TRIGGER this skill whenever the user provides requirements, a ticket, a spec, or a PRD and wants to
