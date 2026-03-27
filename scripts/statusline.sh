@@ -173,7 +173,7 @@ else
   combined_plain="${short_cwd}"
 fi
 
-MAX_COMBINED=$(( col_w < 65 ? col_w : 65 ))
+MAX_COMBINED=$col_w
 if (( ${#combined_plain} > MAX_COMBINED )); then
   excess=$(( ${#combined_plain} - MAX_COMBINED ))
   if (( ${#short_cwd} > excess + 1 )); then
