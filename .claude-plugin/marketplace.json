@@ -1,5 +1,5 @@
 {
-  "name": "duy-ton-skills",
+  "name": "meegine",
   "owner": {
     "name": "duy.ton"
   },
@@ -10,8 +10,8 @@
   },
   "plugins": [
     {
-      "name": "meengine",
-      "source": "./plugins/meengine",
+      "name": "anima",
+      "source": "./plugins/anima",
       "description": "All-in-one skill bundle — coding workflows, MR replies, and more.",
       "version": "0.1.0",
       "author": {

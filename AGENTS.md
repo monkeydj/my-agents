@@ -12,8 +12,8 @@ A personal Claude Code skills and configuration repository. It contains reusable
   - `me-code/` — Full dev cycle orchestrator (branch → implement → test → commit → push)
   - `cipher-talks/` — MR/PR reply crafter with a senior-engineer voice
   - `me-code-workspace/` — Benchmarking iterations for `me-code`
-- `plugins/meengine/` — Plugin bundle that symlinks `skills/` for marketplace distribution
-- `.claude-plugin/marketplace.json` — Marketplace manifest (owner: `duy.ton`, plugin: `meengine`)
+- `plugins/anima/` — Plugin bundle that symlinks `skills/` for marketplace distribution
+- `.claude-plugin/marketplace.json` — Marketplace manifest (owner: `duy.ton`, plugin: `anima`)
 - `scripts/statusline.sh` — Claude Code session monitor with Pac-Man context-window visualization
 - `instructions/GLOBAL_CLAUDE.md` — Master rules (duplicated into `~/.claude/CLAUDE.md` for global use)
 
@@ -29,7 +29,7 @@ When editing a skill, keep trigger phrases tight and unambiguous. Phases should 
 
 ## Plugin Manifest
 
-`plugins/meengine/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` must stay in sync when adding or renaming skills. The `skills` directory inside `meengine` is a symlink — do not break it.
+`plugins/anima/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` must stay in sync when adding or renaming skills. The `skills` directory inside `anima` is a symlink — do not break it.
 
 ## statusline.sh
 
