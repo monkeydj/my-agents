@@ -3,16 +3,16 @@ name: me-code
 description: >
   Personalized incremental coding workflow skill that orchestrates the full development cycle per project.
   TRIGGER this skill whenever the user provides requirements, a ticket, a spec, or a PRD and wants to
-  start implementing — even if they don't say "me-coding" explicitly. Activate for phrases like:
+  start implementing — even if they don't say "me-code" explicitly. Activate for phrases like:
   "implement this", "code this up", "let's build this feature", "start coding based on the ticket",
   "here's the spec, let's go", "follow my coding workflow", "build it", "implement the requirements".
   Also trigger when the user pastes a Jira/Linear/GitHub issue and expects you to begin development.
-  This skill enforces branch safety, persists a plan (via save-plan skill or memory), implements
+  This skill enforces branch safety, tracks the plan via TaskCreate, implements
   changes with language-server and domain skills, runs tests, and commits + pushes with
   conventional messages including ticket IDs.
 ---
 
-# me-coding: Personalized Incremental Coding Workflow
+# me-code: Personalized Incremental Coding Workflow
 
 This skill is your full development cycle orchestrator — from reading a ticket or spec through to
 pushing a clean, tested commit on the right branch. It keeps a persistent plan, respects branch
@@ -84,15 +84,15 @@ before what. Identify which files need to change and roughly how.
 [Key files that will be read or modified]
 ```
 
-**Persist the plan** — use whichever mechanism is available, in this order:
-1. **`save-plan` skill** (preferred) — write the plan to `~/.claude/plans/<kebab-title>.md`,
-   then invoke `/save-plan` to archive it to the Obsidian vault with proper frontmatter and TODOs.
-   Add the ticket ID as a tag (e.g., `/save-plan bp-1234`).
-2. **Serena memory** — call `mcp__serena__write_memory` with name `plan-<ticket-id>` if
-   `save-plan` is not available.
-3. **TaskCreate** — at minimum, create tasks for each implementation step so progress is tracked.
+**Track the plan with TaskCreate** — create one task per implementation step immediately after
+drafting the plan. Always append these two fixed tasks at the end:
 
-After persisting, present the plan to the user and **wait for confirmation** before implementing.
+```
+[ ] Commit changes (Phase 6)
+[ ] Push to remote (Phase 7)
+```
+
+Present the plan to the user and **wait for confirmation** before implementing.
 This is the most important pause in the workflow — alignment here prevents expensive rework.
 
 ---
@@ -133,7 +133,7 @@ bare global command in a Python project — always go through the environment ma
 Read surrounding code before writing new code — match the project's naming conventions, error
 handling style, and patterns. Don't introduce patterns that are foreign to the codebase.
 
-Mark each implementation task as completed in the persisted plan as you finish it.
+Mark each task as completed with TaskUpdate as you finish it.
 
 ---
 
@@ -257,17 +257,10 @@ clearly needed.
 
 ## Working Style
 
-When starting any invocation, create the full task list with TaskCreate **before writing any code**.
-The list must always include these fixed tasks at the end, regardless of what else is in the plan:
-
-```
-[ ] Commit changes (Phase 6)
-[ ] Push to remote (Phase 7)
-```
-
-These two tasks are **not optional**. Do not mark the workflow complete until both are checked off.
-If the user explicitly says "don't push" or "don't commit", mark the task blocked and note the
-reason — never silently drop it.
+Create all tasks with TaskCreate during Phase 2 **before writing any code**. The commit and push
+tasks are not optional — do not mark the workflow complete until both are checked off. If the user
+explicitly says "don't push" or "don't commit", mark the task blocked and note the reason — never
+silently drop it.
 
 ## Composing with Other Skills
 
