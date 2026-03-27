@@ -16,16 +16,9 @@ command -v bc >/dev/null 2>&1 || { echo "Error: bc required" >&2; exit 1; }
 
 input=$(cat)
 
-# =============================================================================
-# SECTION: Pac-Man Animation State
-# =============================================================================
-# Toggles between mouth open/closed for animation effect
-CHOMP_FILE="/tmp/.claude-pacman-chomp"
-if [ -f "$CHOMP_FILE" ] && [ "$(cat "$CHOMP_FILE")" = "1" ]; then
-  PAC_CHAR="●"; G1_CHAR="ᗩ"; G2_CHAR="ᗣ"; echo "0" > "$CHOMP_FILE"
-else
-  PAC_CHAR="ᗧ"; G1_CHAR="ᗣ"; G2_CHAR="ᗩ"; echo "1" > "$CHOMP_FILE"
-fi
+PAC_CHAR="ᗧ"   # context pac-man
+G1_CHAR="ᗣ"    # 5h ghost  (red)
+G2_CHAR="ᗣ"    # 7d ghost  (purple)
 
 # =============================================================================
 # SECTION: Color Definitions
@@ -150,39 +143,49 @@ in_fmt=$(fmt_tokens "$in_tokens"); out_fmt=$(fmt_tokens "$out_tokens")
 tokens_plain="↓${in_fmt}/↑${out_fmt}"
 
 stats_plain="ctx:${ctx_remain}%"
-[ -n "$five_pct" ] && { stats_plain+="  5h:ᗩ${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↺${five_rs}"; }
-[ -n "$week_pct" ] && { stats_plain+="  7d:ᗩ${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↺${week_rs}"; }
+[ -n "$five_pct" ] && { stats_plain+="  5h:ᗣ${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↺${five_rs}"; }
+[ -n "$week_pct" ] && { stats_plain+="  7d:ᗣ${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↺${week_rs}"; }
 
 model_session_plain="${model:-}@${session}"
 
-# Branch: cap at 35 visible chars (⎇ + space + name)
+# Bar/column widths — computed early so combined cap can use col_w
+bar_w=$(( TERM_W - ${#stats_plain} - ${#tokens_plain} - 6 ))
+(( bar_w < 10 )) && bar_w=10
+col_w=$(( bar_w + 2 ))   # matches width of "[bar]" on line 2
+
+# Branch display (cap name at 33 chars)
 branch_display=""
-branch_plain=""
 if [ -n "$branch" ]; then
   if (( ${#branch} > 33 )); then
     branch_display="${branch:0:32}…"
   else
     branch_display="$branch"
   fi
-  branch_plain="⎇ ${branch_display}"
 fi
 
-# Separator cost only if branch is present
-branch_sep=0; (( ${#branch_plain} > 0 )) && branch_sep=2
-
-# Path budget for line 1: leave room for model@session and net
-# net_len includes its 2-space separator; -2 for spaces between path and model@session
-net_len=0; [ -n "$net_plain" ] && net_len=$(( ${#net_plain} + 2 ))
-path_budget=$(( TERM_W - ${#branch_plain} - branch_sep - 2 - ${#model_session_plain} - net_len ))
-(( path_budget < 5 )) && path_budget=5
-if [ -n "$short_cwd" ] && (( ${#short_cwd} > path_budget )); then
-  short_cwd="…${short_cwd: -$(( path_budget - 1 ))}"
+# Combined branch+workdir, capped at 50 chars (truncate path first)
+combined_plain=""
+if [ -n "$branch_display" ]; then
+  combined_plain="⎇ ${branch_display}  ${short_cwd}"
+else
+  combined_plain="${short_cwd}"
 fi
 
-# Bar width for line 2: "[" + bar + "]" + "  " + stats + "  " + tokens = TERM_W
-# -6 = "[" + "]" + "  " (after "]") + "  " (between stats and tokens)
-bar_w=$(( TERM_W - ${#stats_plain} - ${#tokens_plain} - 6 ))
-(( bar_w < 10 )) && bar_w=10
+MAX_COMBINED=$(( col_w < 50 ? col_w : 50 ))
+if (( ${#combined_plain} > MAX_COMBINED )); then
+  excess=$(( ${#combined_plain} - MAX_COMBINED ))
+  if (( ${#short_cwd} > excess + 1 )); then
+    short_cwd="…${short_cwd:$(( excess + 1 ))}"
+  else
+    short_cwd="…"
+  fi
+  if [ -n "$branch_display" ]; then
+    combined_plain="⎇ ${branch_display}  ${short_cwd}"
+  else
+    combined_plain="${short_cwd}"
+  fi
+  (( ${#combined_plain} > MAX_COMBINED )) && combined_plain="${combined_plain:0:$((MAX_COMBINED-1))}…"
+fi
 
 MAP_W=$bar_w
 
@@ -254,11 +257,7 @@ fi
 
 game=""
 if (( g2_caged )); then
-  if [ "$PAC_CHAR" = "ᗧ" ]; then
-    game+="\033[1;35m${G2_CHAR}\033[0m  ${B}▌${NC} "
-  else
-    game+="  \033[1;35m${G2_CHAR}\033[0m${B}▌${NC} "
-  fi
+  game+="\033[1;35m${G2_CHAR}\033[0m  ${B}▌${NC} "
 fi
 cherry_pos=$(( PAC_MIN + 95 * (MAP_W - 1 - PAC_MIN) / 100 ))
 
@@ -289,10 +288,16 @@ done
 # =============================================================================
 # SECTION: Build Colored Segments
 # =============================================================================
-branch_colored=""
-[ -n "$branch_display" ] && branch_colored="${CYN}⎇ ${branch_display}${NC}"
-
-path_colored="${GRY}${short_cwd}${NC}"
+# Combined colored segment + padding to align with [bar] width on line 2
+combined_colored=""
+if [ -n "$branch_display" ]; then
+  combined_colored="${CYN}⎇ ${branch_display}${NC}  ${GRY}${short_cwd}${NC}"
+else
+  combined_colored="${GRY}${short_cwd}${NC}"
+fi
+pad=$(( col_w - ${#combined_plain} ))
+(( pad < 0 )) && pad=0
+padding=$(printf '%*s' "$pad" '')
 
 ctx_c=$(colour_remain "$ctx_remain")
 stats_colored="\033[1;33m${PAC_CHAR}:${ctx_c}"
@@ -315,10 +320,8 @@ model_session_colored="${W}${model:-}${NC}${GRY}@${session}${NC}"
 # SECTION: Output (two lines)
 # =============================================================================
 
-# --- Line 1: branch  path  model@session  net ---
-line1=""
-[ -n "$branch_colored" ] && line1+="${branch_colored}  "
-line1+="${path_colored}  ${model_session_colored}"
+# --- Line 1: [branch  path column]  model@session  net ---
+line1="${combined_colored}${padding}  ${model_session_colored}"
 [ -n "$net_colored" ] && line1+="  ${net_colored}"
 
 # --- Line 2: [pacman bar]  ctx%  5h  7d  tokens ---
