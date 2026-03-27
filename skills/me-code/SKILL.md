@@ -41,6 +41,19 @@ Run `git branch --show-current` before touching any code.
 Read everything the user has provided: tickets, specs, PRDs, Jira issues, inline requirements,
 linked files. If the user referenced something without pasting it, ask for it.
 
+**If the contextplus MCP is available**, use it to map the codebase before reading individual
+files. Run these tools in order:
+
+1. `get_context_tree` — get the project-wide symbol map (files, functions, classes). Use this
+   as the primary structure overview instead of manual `ls` / `find` traversal.
+2. `semantic_code_search` — search by meaning (e.g. "payment processing", "user auth") to find
+   files relevant to the change, even if the names don't match the query literally.
+3. `semantic_navigate` — run on the affected area to identify semantic clusters and spot
+   related files that weren't obvious from the ticket description.
+
+These three tools together replace most ad-hoc codebase exploration. Skip them only when
+contextplus is not configured.
+
 Identify and note:
 - **Type of change:** feature, bug fix, refactor, chore, or data migration
 - **Affected scope:** which files, modules, services, or APIs are likely involved
@@ -130,6 +143,18 @@ Check in this order and use the first match:
 Never invoke `python`, `pip`, `pytest`, `flask`, `django-admin`, or any project CLI tool as a
 bare global command in a Python project — always go through the environment manager or activated venv.
 
+**If contextplus MCP is available**, apply these rules before and during every code change:
+
+| Action | Tool |
+|---|---|
+| Reading a file for the first time | Call `get_file_skeleton` first; read the full file only if the signatures are insufficient |
+| Deleting or renaming any symbol | **Mandatory:** call `get_blast_radius` first — never skip this |
+| Modifying a shared utility or interface | Call `get_blast_radius` to see every call site before changing the signature |
+| After writing code | Call `run_static_analysis` to catch type errors, dead code, and unused imports natively |
+
+`get_blast_radius` is a hard gate — if you skip it and orphan a call site, the tests will tell
+you, but the error will be harder to trace. Run it before every structural change.
+
 Read surrounding code before writing new code — match the project's naming conventions, error
 handling style, and patterns. Don't introduce patterns that are foreign to the codebase.
 
@@ -161,6 +186,10 @@ that already has conventions.
 
 For Python projects, ensure the virtual environment is active before running any command
 (see the environment detection table in Phase 3).
+
+**If contextplus MCP is available**, run `run_static_analysis` first. It delegates to the
+native linter (tsc, pyright, cargo check, go vet) and surfaces type errors and dead code
+before you run the full suite. Fix any issues it reports before proceeding.
 
 Run the full test suite. If you don't know the test command, check in order:
 - `package.json` → `scripts.test`
@@ -267,6 +296,57 @@ clearly needed.
 
 ---
 
+---
+
+## contextplus MCP Integration
+
+contextplus (https://github.com/ForLoopCodes/contextplus) is an optional MCP server that adds
+semantic intelligence to the workflow. When it is configured, it replaces manual file traversal
+and grep-based searches with AST-aware, embedding-backed tools.
+
+**Check availability:** if `get_context_tree` is in the tool list, contextplus is active.
+
+### Tool reference
+
+| Tool | Purpose | When to use |
+|---|---|---|
+| `get_context_tree` | Project-wide symbol map with token-aware pruning | Phase 1 — first step before any file reads |
+| `get_file_skeleton` | Function signatures and types without the full body | Phase 3 — before every full file read |
+| `semantic_code_search` | Find files by meaning via Ollama embeddings | Phase 1 — locate relevant files from ticket language |
+| `semantic_identifier_search` | Find functions/classes and all call sites | Phase 3 — locate symbol usages before refactoring |
+| `semantic_navigate` | Group files into semantic clusters | Phase 1 — discover related code not obvious from names |
+| `get_blast_radius` | Every file and line that imports/uses a symbol | Phase 3 — **mandatory** before any deletion or rename |
+| `run_static_analysis` | Native linter (tsc / pyright / cargo / go vet) | Phase 5 — before running tests |
+| `upsert_memory_node` | Store a concept, file, or symbol in the knowledge graph | After Phase 3 — persist non-obvious codebase facts |
+| `create_relation` | Link two memory nodes with a typed edge | After `upsert_memory_node` — record dependencies/ownership |
+| `search_memory_graph` | Semantic search + graph traversal over stored nodes | Phase 1 — recall prior knowledge about the repo |
+| `undo_change` | Revert a file to its shadow restore point | Any phase — non-destructive rollback without touching git |
+
+### What contextplus does NOT replace
+
+- **TaskCreate / TaskUpdate** — still used for plan tracking
+- **GitLab MCP tools** — still used for MR creation (Phase 7)
+- **Standard Read / Edit / Write tools** — still used for files; `get_file_skeleton` informs
+  when a full read is necessary, but does not replace the Read tool itself
+- **propose_commit** — contextplus's own commit tool enforces strict 2-line header formatting
+  that conflicts with the "match existing code style" rule. Do **not** use `propose_commit`
+  unless the user explicitly opts in. Use standard git commit (Phase 6) instead.
+
+### Memory graph — when to persist
+
+After completing a task, persist findings that would take meaningful effort to re-derive:
+
+```
+Persist when: you discover a non-obvious dependency, an undocumented invariant, or
+              ownership information that isn't in code comments or git history.
+Skip when:    the information is obvious from the code or covered by a docstring.
+```
+
+Create a node with `upsert_memory_node`, then link it to related nodes with `create_relation`
+using typed edges (`depends_on`, `implements`, `uses`, `owns`).
+
+---
+
 ## Working Style
 
 Create all tasks with TaskCreate during Phase 2 **before writing any code**. The commit and push
@@ -282,6 +362,8 @@ do the specialized work within Phase 3. They are not in conflict; they layer nat
 - If `frontend-design` is active, defer to its patterns when writing UI code in Phase 3
 - If a language server skill is active, use its tools (type lookup, symbol navigation, diagnostics)
   to validate types and find references before and after writing code
+- If contextplus MCP is active, its tools layer on top of both — use them for codebase mapping
+  and blast radius checks; they do not replace language server or domain skill responsibilities
 - After implementation, you may invoke `simplify` during Phase 5 if the user asks for a
   code quality pass before committing
 
