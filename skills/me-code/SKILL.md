@@ -176,10 +176,13 @@ Fix failures and re-run until the suite is green. Don't commit until all tests p
 
 ## Phase 6: Commit
 
+> **Mandatory.** This phase must run on every invocation. If tests are skipped (migration), commit
+> immediately after Phase 3. Never stop the workflow here without a commit.
+
 Use **conventional commits** with the ticket ID in the scope position:
 
 ```
-<type>([TICKET-ID]): <short imperative description>
+<type>(TICKET-ID): <short imperative description>
 
 [optional body — explain the why, not the what]
 ```
@@ -188,11 +191,11 @@ Use **conventional commits** with the ticket ID in the scope position:
 
 **Examples:**
 ```
-feat([BP-1234]): add rate limiting middleware to API gateway
-fix([BP-5678]): handle null response from payment provider
-chore([BP-9012]): upgrade deps to address CVE-2024-1234
-migration([BP-3456]): add user_preferences column to accounts table
-refactor([BP-7890]): extract auth logic into dedicated service
+feat(BP-1234): add rate limiting middleware to API gateway
+fix(BP-5678): handle null response from payment provider
+chore(BP-9012): upgrade deps to address CVE-2024-1234
+migration(BP-3456): add user_preferences column to accounts table
+refactor(BP-7890): extract auth logic into dedicated service
 ```
 
 If no ticket ID was provided, use a descriptive scope: `feat(auth): ...`
@@ -200,9 +203,16 @@ If no ticket ID was provided, use a descriptive scope: `feat(auth): ...`
 Stage files intentionally — name them explicitly rather than using `git add .`. Don't
 accidentally include env files, secrets, or unrelated changes.
 
+**Test files (from Phase 4) are staged in the same commit as the implementation.** A feature and
+its tests are one logical unit — they belong together. Use a separate `test(...)` commit only when
+adding or fixing tests for code that was already committed previously.
+
 ---
 
 ## Phase 7: Push
+
+> **Mandatory.** Push immediately after committing. Do not wait for the user to ask. The workflow
+> is not complete until the branch is on the remote.
 
 Push to the current branch. Confirm it is not `main`, `master`, or `release-*` first.
 
@@ -246,7 +256,18 @@ clearly needed.
 ---
 
 ## Working Style
-- Always create a task list using TaskCreate when working on complex multi-step tasks to track progress.
+
+When starting any invocation, create the full task list with TaskCreate **before writing any code**.
+The list must always include these fixed tasks at the end, regardless of what else is in the plan:
+
+```
+[ ] Commit changes (Phase 6)
+[ ] Push to remote (Phase 7)
+```
+
+These two tasks are **not optional**. Do not mark the workflow complete until both are checked off.
+If the user explicitly says "don't push" or "don't commit", mark the task blocked and note the
+reason — never silently drop it.
 
 ## Composing with Other Skills
 
