@@ -4,8 +4,8 @@
 # =============================================================================
 # Dependencies: jq, bc
 #
-# Line 1: ⎇ branch  ~/short/path  Model@session  ⇌ iface ip
-# Line 2: [pac-man bar fills terminal width]  ctx:43%  5h:ᗩ82%↓3h  7d:ᗩ62%↓3d  ↓in/↑out
+# Line 1: ⎇ branch  ~/short/path  effort Model@session
+# Line 2: [pac-man bar fills terminal width]  ctx:43%  5h:ᗩ82%↓3h  7d:ᗩ62%↓3d  ↓in/↑out  ⇌ iface ip
 # =============================================================================
 
 set -euo pipefail
@@ -44,6 +44,7 @@ in_tokens=$(echo "$input"  | jq -r '.context_window.total_input_tokens // 0')
 out_tokens=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
 session_full=$(echo "$input" | jq -r '.session_id // ""')
 session="${session_full:0:8}"
+effort=$(echo "$input"     | jq -r '.effort // empty')
 
 # Convert percentages to integers
 ctx_int=$(printf "%.0f" "$ctx_pct" 2>/dev/null || echo 0)
@@ -146,7 +147,8 @@ stats_plain="ctx:${ctx_remain}%"
 [ -n "$five_pct" ] && { stats_plain+="  5h:ᗣ${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↺${five_rs}"; }
 [ -n "$week_pct" ] && { stats_plain+="  7d:ᗣ${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↺${week_rs}"; }
 
-model_session_plain="${model:-}@${session}"
+effort_prefix="${effort:+${effort} }"
+model_session_plain="${effort_prefix}${model:-}@${session}"
 
 # Bar/column widths — computed early so combined cap can use col_w
 bar_w=$(( TERM_W - ${#stats_plain} - ${#tokens_plain} - 6 ))
@@ -163,7 +165,7 @@ if [ -n "$branch" ]; then
   fi
 fi
 
-# Combined branch+workdir, capped at 50 chars (truncate path first)
+# Combined branch+workdir, capped at 65 chars (truncate path first)
 combined_plain=""
 if [ -n "$branch_display" ]; then
   combined_plain="⎇ ${branch_display}  ${short_cwd}"
@@ -171,7 +173,7 @@ else
   combined_plain="${short_cwd}"
 fi
 
-MAX_COMBINED=$(( col_w < 50 ? col_w : 50 ))
+MAX_COMBINED=$(( col_w < 65 ? col_w : 65 ))
 if (( ${#combined_plain} > MAX_COMBINED )); then
   excess=$(( ${#combined_plain} - MAX_COMBINED ))
   if (( ${#short_cwd} > excess + 1 )); then
@@ -314,18 +316,19 @@ fi
 
 tokens_colored="${BLD}↓${in_fmt}/↑${out_fmt}${NC}"
 
-model_session_colored="${W}${model:-}${NC}${GRY}@${session}${NC}"
+effort_colored="${effort:+${DIM}${effort}${NC} }"
+model_session_colored="${effort_colored}${W}${model:-}${NC}${GRY}@${session}${NC}"
 
 # =============================================================================
 # SECTION: Output (two lines)
 # =============================================================================
 
-# --- Line 1: [branch  path column]  model@session  net ---
+# --- Line 1: [branch  path column]  model@session ---
 line1="${combined_colored}${padding}  ${model_session_colored}"
-[ -n "$net_colored" ] && line1+="  ${net_colored}"
 
-# --- Line 2: [pacman bar]  ctx%  5h  7d  tokens ---
+# --- Line 2: [pacman bar]  ctx%  5h  7d  tokens  net ---
 line2="[${game}]  ${stats_colored}  ${tokens_colored}"
+[ -n "$net_colored" ] && line2+="  ${net_colored}"
 
 echo -e "$line1"
 echo -e "$line2"
