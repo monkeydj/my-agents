@@ -52,20 +52,11 @@ Before touching any code, articulate in your own words:
 
 If you cannot explain the "why" clearly, ask the user. A craftsman never assumes intent — they seek to understand.
 
-### Step 2: Map the Codebase (contextplus MCP)
+### Step 2: Map the Codebase
 
-**If the contextplus MCP is available**, use it to map the codebase before reading individual
-files. Run these tools in order:
+Use **contextplus MCP** for semantic codebase navigation when available. See [`rules/code-analysis.md`](rules/code-analysis.md) for the full tool reference.
 
-1. `get_context_tree` — get the project-wide symbol map (files, functions, classes). Use this
-   as the primary structure overview instead of manual `ls` / `find` traversal.
-2. `semantic_code_search` — search by meaning (e.g. "payment processing", "user auth") to find
-   files relevant to the change, even if the names don't match the query literally.
-3. `semantic_navigate` — run on the affected area to identify semantic clusters and spot
-   related files that weren't obvious from the ticket description.
-
-These three tools together replace most ad-hoc codebase exploration. Skip them only when
-contextplus is not configured. If unavailable, use `ls`, `grep`, `glob`, and file reads manually —
+If contextplus is not available, use `ls`, `grep`, `glob`, and file reads manually —
 but prioritize semantic tools when available.
 
 ### Step 3: Analyze with Craftsmanship Principles
@@ -86,7 +77,7 @@ Document your findings with **explicit reasoning** for each decision. Challenge 
 - **Type of change:** feature | bug fix | refactor | chore | data migration
   - *Reasoning:* Why this classification matters for the workflow
 - **Affected scope:** which files, modules, services, or APIs are likely involved
-  - *Reasoning:* How you identified these through contextplus tools
+  - *Reasoning:* How you identified these (via contextplus tools or manual exploration)
 - **Technical constraints:** performance, backward compatibility, framework-specific rules
   - *Reasoning:* Why these constraints exist and how they shape the implementation
 - **Testing approach:** Can this be tested in isolation? What are the boundaries?
@@ -248,14 +239,12 @@ Check in this order and use the first match:
 Never invoke `python`, `pip`, `pytest`, `flask`, `django-admin`, or any project CLI tool as a
 bare global command in a Python project — always go through the environment manager or activated venv.
 
-**If contextplus MCP is available**, apply these rules before and during every code change:
+**If contextplus MCP is available**, apply these rules. See [`rules/code-analysis.md`](rules/code-analysis.md) for the full tool reference:
 
-| Action | Tool |
-|---|---|
-| Reading a file for the first time | Call `get_file_skeleton` first; read the full file only if the signatures are insufficient |
-| Deleting or renaming any symbol | **Mandatory:** call `get_blast_radius` first — never skip this |
-| Modifying a shared utility or interface | Call `get_blast_radius` to see every call site before changing the signature |
-| After writing code | Call `run_static_analysis` to catch type errors, dead code, and unused imports natively |
+- Reading a file for the first time → `get_file_skeleton` first
+- Deleting or renaming any symbol → **Mandatory:** `get_blast_radius` first
+- Modifying a shared utility/interface → `get_blast_radius` to see call sites
+- After writing code → `run_static_analysis` to catch errors
 
 `get_blast_radius` is a hard gate — if you skip it and orphan a call site, the tests will tell
 you, but the error will be harder to trace. Run it before every structural change.
@@ -308,9 +297,7 @@ that already has conventions.
 For Python projects, ensure the virtual environment is active before running any command
 (see the environment detection table in Phase 3).
 
-**If contextplus MCP is available**, run `run_static_analysis` first. It delegates to the
-native linter (tsc, pyright, cargo check, go vet) and surfaces type errors and dead code
-before you run the full suite. Fix any issues it reports before proceeding.
+**Run static analysis first** to catch type errors and dead code. If contextplus is available, use `run_static_analysis`. Otherwise, run the native linter directly (see [`rules/code-analysis.md`](rules/code-analysis.md) for tool reference). Fix any issues before proceeding.
 
 Run the full test suite. If you don't know the test command, check in order:
 - `package.json` → `scripts.test`
@@ -436,6 +423,8 @@ During **Phase 3**, detect which references apply to the current repo and read t
 any code. Match the existing code style first, then apply the referenced patterns where absent or
 clearly needed.
 
+**For external library/framework documentation:** Use Context7 to get up-to-date docs and code examples. See [`rules/code-analysis.md`](rules/code-analysis.md) for how to use Context7 CLI or skill.
+
 **Detection — load references based on what you find in the repo:**
 
 | Signal in repo | References to load |
@@ -461,55 +450,11 @@ clearly needed.
 
 ---
 
-## contextplus MCP Integration
+## Code Analysis & Exploration
 
-> **Craftsman mindset:** These tools give you superhuman codebase navigation — use them to understand faster, not to skip understanding. The goal is comprehension, not speed.
+For codebase navigation and static analysis, see:
 
-contextplus (https://github.com/ForLoopCodes/contextplus) is an optional MCP server that adds
-semantic intelligence to the workflow. When it is configured, it replaces manual file traversal
-and grep-based searches with AST-aware, embedding-backed tools.
-
-**Check availability:** if `get_context_tree` is in the tool list, contextplus is active.
-
-### Tool reference
-
-| Tool | Purpose | When to use |
-|---|---|---|
-| `get_context_tree` | Project-wide symbol map with token-aware pruning | Phase 1 — first step before any file reads |
-| `get_file_skeleton` | Function signatures and types without the full body | Phase 3 — before every full file read |
-| `semantic_code_search` | Find files by meaning via Ollama embeddings | Phase 1 — locate relevant files from ticket language |
-| `semantic_identifier_search` | Find functions/classes and all call sites | Phase 3 — locate symbol usages before refactoring |
-| `semantic_navigate` | Group files into semantic clusters | Phase 1 — discover related code not obvious from names |
-| `get_blast_radius` | Every file and line that imports/uses a symbol | Phase 3 — **mandatory** before any deletion or rename |
-| `run_static_analysis` | Native linter (tsc / pyright / cargo / go vet) | Phase 5 — before running tests |
-| `upsert_memory_node` | Store a concept, file, or symbol in the knowledge graph | After Phase 3 — persist non-obvious codebase facts |
-| `create_relation` | Link two memory nodes with a typed edge | After `upsert_memory_node` — record dependencies/ownership |
-| `search_memory_graph` | Semantic search + graph traversal over stored nodes | Phase 1 — recall prior knowledge about the repo |
-| `undo_change` | Revert a file to its shadow restore point | Any phase — non-destructive rollback without touching git |
-
-### What contextplus does NOT replace
-
-- **TaskCreate / TaskUpdate** — still used for plan tracking
-- **GitLab MCP tools** — still used for MR creation (Phase 7)
-- **Standard Read / Edit / Write tools** — still used for files; `get_file_skeleton` informs
-  when a full read is necessary, but does not replace the Read tool itself
-- **propose_commit** — contextplus's own commit tool enforces strict 2-line header formatting
-  that conflicts with the "match existing code style" rule. Do **not** use `propose_commit`
-  unless the user explicitly opts in. Use standard git commit (Phase 6) instead.
-
-### Memory graph — when to persist
-
-After completing a task, persist knowledge that would save the next person an hour of investigation:
-
-```
-Persist when: you discover a non-obvious dependency, an undocumented invariant, 
-              ownership information that isn't in code comments or git history,
-              or any finding that would take meaningful effort to re-derive.
-Skip when:    the information is obvious from the code or covered by a docstring.
-```
-
-Create a node with `upsert_memory_node`, then link it to related nodes with `create_relation`
-using typed edges (`depends_on`, `implements`, `uses`, `owns`).
+- **[`rules/code-analysis.md`](rules/code-analysis.md)** — contextplus MCP tools, Context7 for library/framework references, and static analysis tools
 
 ---
 
@@ -536,7 +481,8 @@ do the specialized work within Phase 3. They are not in conflict; they layer nat
 - If a language server skill is active, use its tools (type lookup, symbol navigation, diagnostics)
   to validate types and find references before and after writing code
 - If contextplus MCP is active, its tools layer on top of both — use them for codebase mapping
-  and blast radius checks; they do not replace language server or domain skill responsibilities
+  and blast radius checks; they do not replace language server or domain skill responsibilities.
+  See [`rules/code-analysis.md`](rules/code-analysis.md) for details.
 - After implementation, you may invoke `simplify` during Phase 5 if the user asks for a
   code quality pass before committing
 
