@@ -1,37 +1,22 @@
 #!/usr/bin/env bash
-# =============================================================================
-# Claude Code Status Line — Two-Line Session Monitor with Pac-Man Bar
-# =============================================================================
-# Dependencies: jq, bc
-#
-# Line 1: ⎇ branch  ~/short/path  effort Model@session
-# Line 2: [pac-man bar fills terminal width]  ctx:43%  5h:ᗩ82%↓3h  7d:ᗩ62%↓3d  ↓in/↑out  ⇌ iface ip
-# =============================================================================
-
-set -euo pipefail
-
-# Check dependencies
-command -v jq >/dev/null 2>&1 || { echo "Error: jq required" >&2; exit 1; }
-command -v bc >/dev/null 2>&1 || { echo "Error: bc required" >&2; exit 1; }
+# Claude Code status line — Pac-Man style (single line chase)
+# Top: model/size | CLAUDE | context remain. Map below. Limits underneath.
 
 input=$(cat)
 
-PAC_CHAR="ᗧ"   # context pac-man
-G1_CHAR="ᗣ"    # 5h ghost  (red)
-G2_CHAR="ᗣ"    # 7d ghost  (purple)
+# ── chomp state (toggle between open/closed mouth each update) ───────────────
+CHOMP_FILE="/tmp/.claude-pacman-chomp"
+if [ -f "$CHOMP_FILE" ] && [ "$(cat "$CHOMP_FILE")" = "1" ]; then
+  PAC_CHAR="●"; G1_CHAR="ᗩ"; G2_CHAR="ᗣ"; echo "0" > "$CHOMP_FILE"
+else
+  PAC_CHAR="ᗧ"; G1_CHAR="ᗣ"; G2_CHAR="ᗩ"; echo "1" > "$CHOMP_FILE"
+fi
 
-# =============================================================================
-# SECTION: Color Definitions
-# =============================================================================
-# B=Blue, Y=Yellow, R=Red, P=Purple, O=Orange, W=White, GRY=Gray, CYN=Cyan
-# DIM=Dim, BLD=Bold, NC=No Color
+# ── colours ──────────────────────────────────────────────────────────────────
 B='\033[38;5;27m'; Y='\033[1;33m'; R='\033[1;31m'; P='\033[1;35m'
 O='\033[38;5;208m'; W='\033[0;37m'; DIM='\033[2m'; NC='\033[0m'
-GRY='\033[0;90m'; CYN='\033[0;36m'; BLD='\033[1;37m'
 
-# =============================================================================
-# SECTION: Parse JSON Input
-# =============================================================================
+# ── extract fields ───────────────────────────────────────────────────────────
 ctx_pct=$(echo "$input"    | jq -r '.context_window.used_percentage // "0"')
 five_pct=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
 five_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
@@ -39,23 +24,13 @@ week_pct=$(echo "$input"   | jq -r '.rate_limits.seven_day.used_percentage // em
 week_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 model=$(echo "$input"      | jq -r 'if .model | type == "object" then (.model.display_name // .model.id // empty) | gsub("\\s*\\(.*\\)"; "") else .model // empty end')
 ctx_total=$(echo "$input"  | jq -r '.context_window.context_window_size // .context_window.total_tokens // empty')
-cwd=$(echo "$input"        | jq -r '.workspace.current_dir // .cwd // ""')
-in_tokens=$(echo "$input"  | jq -r '.context_window.total_input_tokens // 0')
-out_tokens=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
-session_full=$(echo "$input" | jq -r '.session_id // ""')
-session="${session_full:0:8}"
-effort=$(echo "$input"     | jq -r '.effort // empty')
+version=$(echo "$input"    | jq -r '.version // empty')
 
-# Convert percentages to integers
 ctx_int=$(printf "%.0f" "$ctx_pct" 2>/dev/null || echo 0)
 five_int=$(printf "%.0f" "${five_pct:-0}" 2>/dev/null || echo 0)
 week_int=$(printf "%.0f" "${week_pct:-0}" 2>/dev/null || echo 0)
 
-# =============================================================================
-# SECTION: Helper Functions
-# =============================================================================
-
-# Format Unix timestamp to human-readable countdown (e.g., "2d3h", "4h30m")
+# ── helpers ──────────────────────────────────────────────────────────────────
 fmt_reset() {
   local ts="$1"; [ -z "$ts" ] && return
   local now; now=$(date +%s); local diff=$(( ts - now ))
@@ -66,7 +41,6 @@ fmt_reset() {
   else printf "%dm" "$m"; fi
 }
 
-# Color percentage based on urgency: <=20% red, <=50% yellow, else white
 colour_remain() {
   local remain="$1"
   if   (( remain <= 20 )); then printf "\033[1;31m%d%%\033[0m" "$remain"
@@ -74,155 +48,70 @@ colour_remain() {
   else printf "\033[0;37m%d%%\033[0m" "$remain"; fi
 }
 
-# Format large token counts: 1M+ = "1.5M", 1K+ = "1.2K", else raw number
 fmt_tokens() {
   local t="$1"; [ -z "$t" ] && return
-  if (( t >= 1000000000 )); then printf "%.1fG" "$(echo "$t / 1000000000" | bc -l)"
-  elif (( t >= 1000000 )); then printf "%dM" $(( t / 1000000 ))
-  elif (( t >= 1000 )); then printf "%.1fK" "$(echo "$t / 1000" | bc -l)"
+  if (( t >= 1000000 )); then printf "%dM" $(( t / 1000000 ))
+  elif (( t >= 1000 )); then printf "%dk" $(( t / 1000 ))
   else printf "%d" "$t"; fi
 }
 
-# =============================================================================
-# SECTION: Network Interface Detection
-# =============================================================================
-# Supports macOS (route, ipconfig) and Linux (ip route)
-net_iface=$(route get default 2>/dev/null | awk '/interface:/{print $2}')
-if [ -z "$net_iface" ]; then
-  net_iface=$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')
-fi
-net_ip=""
-if [ -n "$net_iface" ]; then
-  net_ip=$(ipconfig getifaddr "$net_iface" 2>/dev/null)
-  if [ -z "$net_ip" ]; then
-    net_ip=$(ip -4 addr show "$net_iface" 2>/dev/null | awk '/inet /{gsub(/\/.*/, "", $2); print $2; exit}')
-  fi
-fi
+rep_hline() {
+  local n=$1 s=""
+  for (( i=0; i<n; i++ )); do s+="\033[38;5;27m═\033[0m"; done
+  printf "%s" "$s"
+}
 
-net_plain=""; net_colored=""
-if [ -n "$net_iface" ]; then
-  net_plain="⇌ ${net_iface}"
-  [ -n "$net_ip" ] && net_plain+=" ${net_ip}"
-  # VPN interfaces: utun*, tun*, wg*, ppp*, tailscale*
-  case "$net_iface" in
-    utun*|tun*|wg*|ppp*|tailscale*)
-      net_colored="${O}⇌ ${net_iface}${NC}"
-      [ -n "$net_ip" ] && net_colored+=" ${DIM}${net_ip}${NC}"
-      ;;
-    *)
-      net_colored="${CYN}⇌ ${net_iface}${NC}"
-      [ -n "$net_ip" ] && net_colored+=" ${DIM}${net_ip}${NC}"
-      ;;
-  esac
-fi
+# ── map config ───────────────────────────────────────────────────────────────
+MAP_W=60
+PAD=1  # padding between border and content
+TOTAL_W=$(( MAP_W + 2 + PAD * 2 ))  # 54
 
-# =============================================================================
-# SECTION: Git Info & Path
-# =============================================================================
-short_cwd=$(echo "$cwd" | sed "s|^$HOME|~|")
-
-repo=""; branch=""
-if [ -n "$cwd" ] && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  repo=$(basename "$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)")
-  branch=$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null)
-fi
-
-# =============================================================================
-# SECTION: Width Budget & Segment Planning
-# =============================================================================
-TERM_W=$(tput cols 2>/dev/null || echo 80)
-
-# Calculate remaining percentages
+# ── remaining values ─────────────────────────────────────────────────────────
 ctx_remain=$(( 100 - ctx_int )); (( ctx_remain < 0 )) && ctx_remain=0
 five_remain=$(( 100 - five_int )); (( five_remain < 0 )) && five_remain=0
 week_remain=$(( 100 - week_int )); (( week_remain < 0 )) && week_remain=0
 five_rs=$(fmt_reset "$five_reset")
 week_rs=$(fmt_reset "$week_reset")
 
-# Right-side segments in plain text (for length measurement only)
-in_fmt=$(fmt_tokens "$in_tokens"); out_fmt=$(fmt_tokens "$out_tokens")
-tokens_plain="↓${in_fmt}/↑${out_fmt}"
-
-stats_plain="ctx:${ctx_remain}%"
-[ -n "$five_pct" ] && { stats_plain+="  5h:ᗣ${five_remain}%"; [ -n "$five_rs" ] && stats_plain+="↺${five_rs}"; }
-[ -n "$week_pct" ] && { stats_plain+="  7d:ᗣ${week_remain}%"; [ -n "$week_rs" ] && stats_plain+="↺${week_rs}"; }
-
-effort_prefix="${effort:+${effort} }"
-model_session_plain="${effort_prefix}${model:-}@${session}"
-
-# Bar/column widths — computed early so combined cap can use col_w
-bar_w=$(( TERM_W - ${#stats_plain} - ${#tokens_plain} - 6 ))
-(( bar_w < 10 )) && bar_w=10
-col_w=$(( bar_w + 2 ))   # matches width of "[bar]" on line 2
-
-# Branch display (cap name at 33 chars)
-branch_display=""
-if [ -n "$branch" ]; then
-  if (( ${#branch} > 33 )); then
-    branch_display="${branch:0:32}…"
-  else
-    branch_display="$branch"
-  fi
-fi
-
-# Combined branch+workdir, capped at 65 chars (truncate path first)
-combined_plain=""
-if [ -n "$branch_display" ]; then
-  combined_plain="⎇ ${branch_display}  ${short_cwd}"
-else
-  combined_plain="${short_cwd}"
-fi
-
-MAX_COMBINED=$(( col_w < 65 ? col_w : 65 ))
-if (( ${#combined_plain} > MAX_COMBINED )); then
-  excess=$(( ${#combined_plain} - MAX_COMBINED ))
-  if (( ${#short_cwd} > excess + 1 )); then
-    short_cwd="…${short_cwd:$(( excess + 1 ))}"
-  else
-    short_cwd="…"
-  fi
-  if [ -n "$branch_display" ]; then
-    combined_plain="⎇ ${branch_display}  ${short_cwd}"
-  else
-    combined_plain="${short_cwd}"
-  fi
-  (( ${#combined_plain} > MAX_COMBINED )) && combined_plain="${combined_plain:0:$((MAX_COMBINED-1))}…"
-fi
-
-MAP_W=$bar_w
-
-# =============================================================================
-# SECTION: Game State
-# =============================================================================
-# Legend: Pac-Man (ᗧ/●) = context usage, Ghost ᗩ(red) = 5h rate, Ghost ᗣ(purple) = 7d rate
-PAC_MIN=5
-(( PAC_MIN >= MAP_W )) && PAC_MIN=$(( MAP_W / 3 ))
+# ── positions ────────────────────────────────────────────────────────────────
+PAC_MIN=12  # minimum start position — leaves room for ghosts to chase
 pac_pos=$(( PAC_MIN + ctx_int * (MAP_W - 1 - PAC_MIN) / 100 ))
 (( pac_pos < PAC_MIN )) && pac_pos=$PAC_MIN
 (( pac_pos >= MAP_W )) && pac_pos=$(( MAP_W - 1 ))
 
 g1=-1; g2=-1; game_over=0
-g2_caged=0
+g2_caged=0  # 1 = 7d ghost locked in room
 
 if [ -n "$five_pct" ]; then
   if (( five_int >= 100 )); then g1=$pac_pos; game_over=1
-  else g1_pending=$five_int; fi
-fi
-
-if [ -n "$week_pct" ]; then
-  if (( week_remain > 50 )); then g2_caged=1; fi
-  if (( g2_caged == 0 )); then
-    if (( week_int >= 100 )); then g2=$pac_pos; game_over=1
-    else g2_pending=$week_int; fi
+  else
+    # Ghost range: ROOM_W..pac_pos (calculated after room offset is set)
+    g1_pending=$five_int
   fi
 fi
 
+if [ -n "$week_pct" ]; then
+  # Cage ghost when 7d usage < 50% (remaining > 50%)
+  if (( week_remain > 50 )); then
+    g2_caged=1
+  fi
+
+  if (( g2_caged == 0 )); then
+    if (( week_int >= 100 )); then g2=$pac_pos; game_over=1
+    else
+      g2_pending=$week_int
+    fi
+  fi
+fi
+
+# ── room offset (caged ghost takes positions 0-4) ─────────────────────────────
 ROOM_W=0
 if (( g2_caged )); then
-  ROOM_W=5
+  ROOM_W=5  # 3 interior + 1 wall + 1 gap
   (( pac_pos < ROOM_W )) && pac_pos=$ROOM_W
 fi
 
+# ── resolve pending ghost positions (relative to their start..pac_pos range) ──
 if [ -n "${g1_pending:-}" ]; then
   g1_start=$ROOM_W
   g1=$(( g1_start + g1_pending * (pac_pos - g1_start) / 100 ))
@@ -231,6 +120,7 @@ if [ -n "${g2_pending:-}" ]; then
   g2=$(( week_int * pac_pos / 100 ))
 fi
 
+# ── resolve overlaps ────────────────────────────────────────────────────────
 if (( game_over == 0 )); then
   (( g1 >= 0 && g1 >= pac_pos && pac_pos > 0 )) && g1=$(( pac_pos - 1 ))
   (( g2 >= 0 && g2 >= pac_pos && pac_pos > 0 )) && g2=$(( pac_pos - 1 ))
@@ -244,9 +134,7 @@ if (( game_over == 0 )); then
   (( g2 >= 0 && g2 == pac_pos && pac_pos > 0 )) && g2=$(( pac_pos - 1 ))
 fi
 
-# =============================================================================
-# SECTION: Build Pac-Man Bar
-# =============================================================================
+# ── build game line ──────────────────────────────────────────────────────────
 go_text=" GAME OVER"
 go_start=-1
 if (( game_over )); then
@@ -258,9 +146,15 @@ if (( game_over )); then
 fi
 
 game=""
+# Prepend room if ghost is caged (ghost bounces in 3-cell room + wall + gap)
 if (( g2_caged )); then
-  game+="\033[1;35m${G2_CHAR}\033[0m  ${B}▌${NC} "
+  if [ "$PAC_CHAR" = "ᗧ" ]; then
+    game+="\033[1;35m${G2_CHAR}\033[0m  ${B}▌${NC} "
+  else
+    game+="  \033[1;35m${G2_CHAR}\033[0m${B}▌${NC} "
+  fi
 fi
+# Cherry position at ~80% context (auto compact threshold)
 cherry_pos=$(( PAC_MIN + 95 * (MAP_W - 1 - PAC_MIN) / 100 ))
 
 for (( i=ROOM_W; i<MAP_W; i++ )); do
@@ -287,48 +181,61 @@ for (( i=ROOM_W; i<MAP_W; i++ )); do
   fi
 done
 
-# =============================================================================
-# SECTION: Build Colored Segments
-# =============================================================================
-# Combined colored segment + padding to align with [bar] width on line 2
-combined_colored=""
-if [ -n "$branch_display" ]; then
-  combined_colored="${CYN}⎇ ${branch_display}${NC}  ${GRY}${short_cwd}${NC}"
-else
-  combined_colored="${GRY}${short_cwd}${NC}"
-fi
-pad=$(( col_w - ${#combined_plain} ))
-(( pad < 0 )) && pad=0
-padding=$(printf '%*s' "$pad" '')
+# ── build border lines ────────────────────────────────────────────────────────
+hline_w=$(( MAP_W + PAD * 2 ))
+top_border="${B}╭${NC}$(rep_hline $hline_w)${B}╮${NC}"
+bot_border="${B}╰${NC}$(rep_hline $hline_w)${B}╯${NC}"
 
+# ── header: CLAUDE (left)    model size ᗧontext XX% left (right) ─────────────
+ctx_size=$(fmt_tokens "$ctx_total")
 ctx_c=$(colour_remain "$ctx_remain")
-stats_colored="\033[1;33m${PAC_CHAR}:${ctx_c}"
-if [ -n "$five_pct" ]; then
-  five_c=$(colour_remain "$five_remain")
-  stats_colored+="  \033[2m5h\033[0m\033[1;31m${G1_CHAR}:\033[0m${five_c}"
-  [ -n "$five_rs" ] && stats_colored+="\033[2m↺${five_rs}\033[0m"
-fi
+
+# Right text: "opus 4.6 1M ᗧontext 65% left"
+right_plain=""
+[ -n "$model" ] && right_plain+="${model} "
+[ -n "$ctx_size" ] && right_plain+="${ctx_size} "
+right_plain+="Xontext ${ctx_remain}% left"
+right_len=${#right_plain}
+
+# Left = "CLAUDE vX.X.X"
+left_plain="CLAUDE"
+[ -n "$version" ] && left_plain+=" v${version}"
+left_len=${#left_plain}
+gap=$(( TOTAL_W - left_len - right_len ))
+(( gap < 2 )) && gap=2
+
+# Colored left
+left_colored="${O}CLAUDE${NC}"
+[ -n "$version" ] && left_colored+=" ${DIM}v${version}${NC}"
+
+# Colored right
+right_colored=""
+[ -n "$model" ] && right_colored+="${W}${model}${NC} "
+[ -n "$ctx_size" ] && right_colored+="\033[2m${ctx_size}\033[0m "
+right_colored+="\033[1;33mᗧ\033[0m\033[2montext\033[0m ${ctx_c} \033[2mleft\033[0m"
+
+# ── rate limit line (below map) ──────────────────────────────────────────────
+limit_line=""
 if [ -n "$week_pct" ]; then
   week_c=$(colour_remain "$week_remain")
-  stats_colored+="  \033[2m7d\033[0m\033[1;35m${G2_CHAR}:\033[0m${week_c}"
-  [ -n "$week_rs" ] && stats_colored+="\033[2m↺${week_rs}\033[0m"
+  limit_line+="\033[1;35mᗩ\033[0m \033[2m7d\033[0m ${week_c}"
+  [ -n "$week_rs" ] && limit_line+=" \033[2m↓${week_rs}\033[0m"
+fi
+if [ -n "$five_pct" ]; then
+  [ -n "$limit_line" ] && limit_line+="  "
+  five_c=$(colour_remain "$five_remain")
+  limit_line+="\033[1;31mᗩ\033[0m \033[2m5h\033[0m ${five_c}"
+  [ -n "$five_rs" ] && limit_line+=" \033[2m↓${five_rs}\033[0m"
 fi
 
-tokens_colored="${BLD}↓${in_fmt}/↑${out_fmt}${NC}"
-
-effort_colored="${effort:+${DIM}${effort}${NC} }"
-model_session_colored="${effort_colored}${W}${model:-}${NC}${GRY}@${session}${NC}"
-
-# =============================================================================
-# SECTION: Output (two lines)
-# =============================================================================
-
-# --- Line 1: [branch  path column]  model@session ---
-line1="${combined_colored}${padding}  ${model_session_colored}"
-
-# --- Line 2: [pacman bar]  ctx%  5h  7d  tokens  net ---
-line2="[${game}]  ${stats_colored}  ${tokens_colored}"
-[ -n "$net_colored" ] && line2+="  ${net_colored}"
-
-echo -e "$line1"
-echo -e "$line2"
+# ── output ───────────────────────────────────────────────────────────────────
+gap_pad=$(printf "%*s" "$gap" "")
+# Single line: CLAUDE version (left) + gap + right info
+# echo -e "${left_colored}${gap_pad}${right_colored}"
+# Map
+echo -e "$top_border"
+echo -e "${B}║${NC} ${game} ${B}║${NC}"
+echo -e "$bot_border"
+# Limits
+echo -ne "$right_colored  "
+[ -n "$limit_line" ] && echo -e "$limit_line"
