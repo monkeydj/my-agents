@@ -65,7 +65,8 @@ files. Run these tools in order:
    related files that weren't obvious from the ticket description.
 
 These three tools together replace most ad-hoc codebase exploration. Skip them only when
-contextplus is not configured.
+contextplus is not configured. If unavailable, use `ls`, `grep`, `glob`, and file reads manually —
+but prioritize semantic tools when available.
 
 ### Step 3: Analyze with Craftsmanship Principles
 
@@ -80,7 +81,7 @@ For each potential change, evaluate through the lens of Software Craftsmanship:
 
 ### Step 4: Identify Scope with Reasoning
 
-Document your findings with **explicit reasoning** for each decision:
+Document your findings with **explicit reasoning** for each decision. Challenge your assumptions:
 
 - **Type of change:** feature | bug fix | refactor | chore | data migration
   - *Reasoning:* Why this classification matters for the workflow
@@ -102,6 +103,7 @@ Before proceeding to Phase 2, identify:
 - **Breaking changes:** Could this affect existing consumers? (API, DB, contract)
 - **Rollback strategy:** How would we undo this if it fails?
 - **Edge cases:** What are the failure modes no one mentioned?
+- **Spike consideration:** If uncertainty is high, should you prototype first before full implementation?
 
 If anything is ambiguous or underspecified, ask now — it's cheaper to clarify before planning
 than to backtrack mid-implementation. A craftsman clarifies before acting.
@@ -114,6 +116,8 @@ than to backtrack mid-implementation. A craftsman clarifies before acting.
 
 Break the work into ordered, concrete tasks. Think through dependencies — what has to happen
 before what. Identify which files need to change and roughly how.
+
+> **Scaling the plan:** For small, straightforward changes (e.g., one-file fix, simple feature), use a simplified version of this template. For complex changes involving multiple modules, refactoring, or uncertain paths, use the full structure below. If uncertainty is high, add a **Spike** task to prototype before committing to an approach.
 
 ### Plan Structure with Reasoning
 
@@ -163,6 +167,10 @@ Every decision in the plan must include **why** — not just what. This follows 
 - [Any cleanup identified during analysis that could be done alongside this change]
 - **Reasoning:** [Why do this now vs. later? "If not now, when?" principle]
 
+## Rollback Plan
+- [How to undo this change if it fails in production]
+- **Reasoning:** A craftsman thinks about reversibility — forward progress without a retreat path is reckless
+
 ## Critical Files
 [Key files that will be read or modified — with brief notes on what aspect matters]
 ```
@@ -176,6 +184,8 @@ drafting the plan. Include the reasoning as task notes when possible. Always app
 [ ] Commit changes (Phase 6)
 [ ] Push to remote (Phase 7)
 ```
+
+**Order tasks by dependency, not convenience.** The logical sequence matters more than what's easiest.
 
 ### Alignment Check
 
@@ -194,7 +204,20 @@ A craftsman plans with the same care they write code.
 
 ## Phase 3: Implement Changes
 
-Execute the confirmed plan, task by task. As you work:
+> **Craftsman mindset:** Write code as if the next person maintaining it is a fellow professional who deserves clarity. Think before you type. Clean code is not a luxury — it's respect.
+
+Execute the confirmed plan, task by task. As you work, follow the TDD rhythm when starting fresh:
+
+1. **Red** — Write a failing test that describes the behavior you want
+2. **Green** — Write the minimum code to make it pass
+3. **Refactor** — Clean up, then move to the next task
+
+**Pause and refactor before moving on.** If the code smells during implementation, fix it now — don't accumulate debt. After each task, review what you wrote:
+- Does it match the plan?
+- Does the plan still make sense?
+- Run `run_static_analysis` before marking the task complete — clean code first.
+
+If something unexpected surfaces, update the plan before continuing. A craftsman adapts without excuse.
 
 **Activate relevant skills** for this session if they are available:
 
@@ -240,23 +263,37 @@ you, but the error will be harder to trace. Run it before every structural chang
 Read surrounding code before writing new code — match the project's naming conventions, error
 handling style, and patterns. Don't introduce patterns that are foreign to the codebase.
 
+> **Self-review before next task:** Before marking a task complete, run `run_static_analysis` 
+and fix any issues. Then ask: "Would I be proud to show this to a peer?" If not, refactor first.
+
 Mark each task as completed with TaskUpdate as you finish it.
 
 ---
 
 ## Phase 4: Add Tests
 
+> **Craftsman mindset:** Tests are not an afterthought — they are the specification. Write tests that describe behavior, not implementation details. A test should read like documentation.
+
 **Skip this phase entirely if:**
 - The change is a **data migration**, OR
 - No testing framework can be detected in the project
 
-Otherwise, add tests appropriate to the change:
+Otherwise, add tests appropriate to the change. Follow **Red-Green-Refactor**:
+1. Write a failing test first (describe what you want)
+2. Write the minimum code to make it pass
+3. Refactor the test for readability
 
 | Test type      | When to add                                                     |
 |----------------|-----------------------------------------------------------------|
 | Unit           | Pure functions, utilities, business logic, isolated components  |
 | Integration    | Service boundaries, database interactions, API clients          |
 | E2E            | User-facing flows — only if an E2E framework already exists     |
+
+**Test quality principles:**
+- Name tests to describe behavior, not implementation: `test_user_can_login` not `test_auth_module`
+- Include edge cases and error paths, not just happy path
+- Don't test framework internals — test behavior
+- If a test is hard to write, the code might be hard to use — refactor the code first
 
 Find existing test files near the code you changed and mirror their structure exactly — file
 naming, import style, assertion patterns. Don't introduce a new testing style into a project
@@ -265,6 +302,8 @@ that already has conventions.
 ---
 
 ## Phase 5: Run Tests & Fix Failures
+
+> **Craftsman mindset:** A failing test is a conversation. Read it carefully — it tells you something about the system. Don't guess. Trace, understand, then fix.
 
 For Python projects, ensure the virtual environment is active before running any command
 (see the environment detection table in Phase 3).
@@ -281,6 +320,17 @@ Run the full test suite. If you don't know the test command, check in order:
 - `cargo test` for Rust
 - Ask the user if still unclear
 
+**When tests fail:**
+1. Read the failure message — understand what it's saying
+2. Trace the stack — don't guess at the cause
+3. Fix the root cause, not the symptom
+4. If a test fails for an unrelated reason, fix the test — don't disable it
+5. Never skip flaky tests — fix them or mark them as flaky
+
+**Test isolation:** If tests interfere with each other, that's a code smell. Fix the test suite, don't reorder tests to hide the problem.
+
+**Coverage watch:** If coverage drops significantly, ask: "What's no longer tested? Is that intentional?"
+
 Fix failures and re-run until the suite is green. Don't commit until all tests pass.
 
 ---
@@ -289,6 +339,19 @@ Fix failures and re-run until the suite is green. Don't commit until all tests p
 
 > **Mandatory.** This phase must run on every invocation. If tests are skipped (migration), commit
 > immediately after Phase 3. Never stop the workflow here without a commit.
+
+> **Craftsman mindset:** A commit is a unit of history. Make it meaningful. Don't pollute the timeline with WIP commits — squash before you push.
+
+**Pre-commit review:** Before running `git commit`, review what you're actually committing:
+
+```bash
+git diff --staged
+```
+
+Ask yourself:
+- Does this tell a coherent story?
+- Is the commit message accurate?
+- Are there any temp files, debug logs, or unintended changes?
 
 Use **conventional commits** with the ticket ID in the scope position:
 
@@ -314,9 +377,13 @@ If no ticket ID was provided, use a descriptive scope: `feat(auth): ...`
 Stage files intentionally — name them explicitly rather than using `git add .`. Don't
 accidentally include env files, secrets, or unrelated changes.
 
+**Squash WIP commits:** If you have commits like "WIP", "temp", or "fix typo", squash them before pushing. Clean history matters.
+
 **Test files (from Phase 4) are staged in the same commit as the implementation.** A feature and
 its tests are one logical unit — they belong together. Use a separate `test(...)` commit only when
 adding or fixing tests for code that was already committed previously.
+
+**Don't amend unless necessary.** If you've already pushed, don't amend — create a new commit.
 
 ---
 
@@ -325,16 +392,28 @@ adding or fixing tests for code that was already committed previously.
 > **Mandatory.** Push immediately after committing. Do not wait for the user to ask. The workflow
 > is not complete until the branch is on the remote.
 
+> **Craftsman mindset:** Your work isn't done until it's visible to others. Make it easy for reviewers to understand what you did and why.
+
 Push to the current branch. Confirm it is not `main`, `master`, or `release-*` first.
 
 ```bash
 git push -u origin <current-branch>
 ```
 
+**Self-review before MR exists:** Before creating the MR, review your diff one more time. This is the last chance to catch something before others see it.
+
 After pushing, **always print the current branch name**. Then check for an existing MR on this branch:
 
 - If an MR exists: print its URL prominently as the final output line.
 - If no MR exists: **create a Draft MR automatically** using the GitLab MCP tool (`mcp__gitlab__create_merge_request`). Set `draft: true`. The user will open/ready it manually when ready. Print the newly created MR URL.
+
+**Populate the MR description:** Don't leave it blank. Include:
+- What this change does (summary)
+- Why this change exists (context from Phase 1)
+- How to test it (if not obvious)
+- Any screenshots or demo steps for UI changes
+
+Don't make reviewers hunt for context. A craftsman makes their work easy to review.
 
 **End-of-workflow output format (always):**
 
@@ -350,6 +429,8 @@ Never omit this block. It is the final line of the workflow.
 ---
 
 ## Technical Domain References
+
+> **Craftsman mindset:** These references are guardrails, not blueprints. Apply judgment. If a reference conflicts with existing code, existing code wins — consistency within a codebase matters more than following an external pattern.
 
 During **Phase 3**, detect which references apply to the current repo and read them before writing
 any code. Match the existing code style first, then apply the referenced patterns where absent or
@@ -381,6 +462,8 @@ clearly needed.
 ---
 
 ## contextplus MCP Integration
+
+> **Craftsman mindset:** These tools give you superhuman codebase navigation — use them to understand faster, not to skip understanding. The goal is comprehension, not speed.
 
 contextplus (https://github.com/ForLoopCodes/contextplus) is an optional MCP server that adds
 semantic intelligence to the workflow. When it is configured, it replaces manual file traversal
@@ -416,11 +499,12 @@ and grep-based searches with AST-aware, embedding-backed tools.
 
 ### Memory graph — when to persist
 
-After completing a task, persist findings that would take meaningful effort to re-derive:
+After completing a task, persist knowledge that would save the next person an hour of investigation:
 
 ```
-Persist when: you discover a non-obvious dependency, an undocumented invariant, or
-              ownership information that isn't in code comments or git history.
+Persist when: you discover a non-obvious dependency, an undocumented invariant, 
+              ownership information that isn't in code comments or git history,
+              or any finding that would take meaningful effort to re-derive.
 Skip when:    the information is obvious from the code or covered by a docstring.
 ```
 
@@ -431,10 +515,17 @@ using typed edges (`depends_on`, `implements`, `uses`, `owns`).
 
 ## Working Style
 
+> **Craftsman mindset:** This discipline isn't bureaucracy — it's respect for the process and the team. Each phase exists for a reason. Shortcuts create debt.
+
 Create all tasks with TaskCreate during Phase 2 **before writing any code**. The commit and push
-tasks are not optional — do not mark the workflow complete until both are checked off. If the user
-explicitly says "don't push" or "don't commit", mark the task blocked and note the reason — never
-silently drop it.
+tasks are not optional — do not mark the workflow complete until both are checked off.
+
+**When the user asks to stop early:**
+- Still create the commit and push tasks
+- Mark them as blocked and note the reason: "User requested to pause"
+- Never silently drop them — transparency over assumption
+
+If the user explicitly says "don't push" or "don't commit", respect their decision but document it. A craftsman is honest about the state of things.
 
 ## Composing with Other Skills
 
@@ -448,5 +539,7 @@ do the specialized work within Phase 3. They are not in conflict; they layer nat
   and blast radius checks; they do not replace language server or domain skill responsibilities
 - After implementation, you may invoke `simplify` during Phase 5 if the user asks for a
   code quality pass before committing
+
+**Conflict resolution:** If skills conflict (e.g., one says do X, another says do Y), ask the user — don't guess which takes precedence. When in doubt, the domain skill usually wins for its domain, but clarity beats assumption.
 
 The goal of this skill is a clean, tested, well-described commit on the right branch — every time.
