@@ -1,4 +1,4 @@
-## Phase 8: Post-Commit Code Review (Optional)
+## Post-Commit Code Review (Optional)
 
 > **Craftsman mindset:** A second set of eyes catches what you missed. Code review is not criticism — it's professional courtesy and quality insurance.
 

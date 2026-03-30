@@ -1,4 +1,4 @@
-## Phase 6: Commit, Push & MR
+## Commit, Push & Create MR
 
 > **Mandatory.** This phase must run on every invocation. If tests are skipped (migration), commit
 > and push immediately after Phase 3. Never stop the workflow here without completing all three.
