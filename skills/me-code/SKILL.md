@@ -21,7 +21,6 @@ safety rules, and composes with language-specific and domain skills.
 
 Work through the phases in order. Mark each phase done before moving on.
 
----
 
 ## Phase 0: Branch Safety (Always First)
 
@@ -35,7 +34,6 @@ Run `git branch --show-current` before touching any code.
 
 **Hard constraint:** Never push to `main`, `master`, or any `release-*` branch at any point.
 
----
 
 ## Phase 1: Review & Analyze
 
@@ -100,7 +98,6 @@ Before proceeding to Phase 2, identify:
 If anything is ambiguous or underspecified, ask now — it's cheaper to clarify before planning
 than to backtrack mid-implementation. A craftsman clarifies before acting.
 
----
 
 ## Phase 2: Craft & Persist the Development Plan
 
@@ -170,11 +167,10 @@ Every decision in the plan must include **why** — not just what. This follows 
 ### Task Tracking
 
 **Track the plan with TaskCreate** — create one task per implementation step immediately after
-drafting the plan. Include the reasoning as task notes when possible. Always append these two fixed tasks at the end:
+drafting the plan. Include the reasoning as task notes when possible. Always append this fixed task at the end:
 
 ```
-[ ] Commit changes (Phase 6)
-[ ] Push to remote (Phase 7)
+[ ] Commit, push & create MR (Phase 6)
 ```
 
 **Order tasks by dependency, not convenience.** The logical sequence matters more than what's easiest.
@@ -192,7 +188,6 @@ This is the most important pause in the workflow — alignment here prevents exp
 
 A craftsman plans with the same care they write code.
 
----
 
 ## Phase 3: Implement Changes
 
@@ -258,7 +253,6 @@ and fix any issues. Then ask: "Would I be proud to show this to a peer?" If not,
 
 Mark each task as completed with TaskUpdate as you finish it.
 
----
 
 ## Phase 4: Add Tests
 
@@ -289,7 +283,6 @@ Find existing test files near the code you changed and mirror their structure ex
 naming, import style, assertion patterns. Don't introduce a new testing style into a project
 that already has conventions.
 
----
 
 ## Phase 5: Run Tests & Fix Failures
 
@@ -321,162 +314,16 @@ Run the full test suite. If you don't know the test command, check in order:
 
 Fix failures and re-run until the suite is green. Don't commit until all tests pass.
 
----
 
-## Phase 6: Commit
+## Phase 6: Commit, Push & MR
 
-> **Mandatory.** This phase must run on every invocation. If tests are skipped (migration), commit
-> immediately after Phase 3. Never stop the workflow here without a commit.
+See [`workflow/commit-n-push.md`](workflow/commit-n-push.md).
 
-> **Craftsman mindset:** A commit is a unit of history. Make it meaningful. Don't pollute the timeline with WIP commits — squash before you push.
 
-**Pre-commit review:** Before running `git commit`, review what you're actually committing:
+## Phase 7: Post-Commit Code Review (Optional)
 
-```bash
-git diff --staged
-```
+See [`workflow/review-code-changes.md`](workflow/review-code-changes.md).
 
-Ask yourself:
-- Does this tell a coherent story?
-- Is the commit message accurate?
-- Are there any temp files, debug logs, or unintended changes?
-
-Use **conventional commits** with the ticket ID in the scope position:
-
-```
-<type>(TICKET-ID): <short imperative description>
-
-[optional body — explain the why, not the what]
-```
-
-**Types:** `feat`, `fix`, `chore`, `refactor`, `test`, `docs`, `migration`
-
-**Examples:**
-```
-feat(BP-1234): add rate limiting middleware to API gateway
-fix(GG-5678): handle null response from payment provider
-chore(DRM-9012): upgrade deps to address CVE-2024-1234
-migration(DATA-3456): add user_preferences column to accounts table
-refactor(ARB-7890): extract auth logic into dedicated service
-```
-
-If no ticket ID was provided, use a descriptive scope: `feat(auth): ...`
-
-Stage files intentionally — name them explicitly rather than using `git add .`. Don't
-accidentally include env files, secrets, or unrelated changes.
-
-**Squash WIP commits:** If you have commits like "WIP", "temp", or "fix typo", squash them before pushing. Clean history matters.
-
-**Test files (from Phase 4) are staged in the same commit as the implementation.** A feature and
-its tests are one logical unit — they belong together. Use a separate `test(...)` commit only when
-adding or fixing tests for code that was already committed previously.
-
-**Don't amend unless necessary.** If you've already pushed, don't amend — create a new commit.
-
----
-
-## Phase 7: Push & Report MR
-
-> **Mandatory.** Push immediately after committing. Do not wait for the user to ask. The workflow
-> is not complete until the branch is on the remote.
-
-> **Craftsman mindset:** Your work isn't done until it's visible to others. Make it easy for reviewers to understand what you did and why.
-
-Push to the current branch. Confirm it is not `main`, `master`, or `release-*` first.
-
-```bash
-git push -u origin <current-branch>
-```
-
-**Self-review before MR exists:** Before creating the MR, review your diff one more time. This is the last chance to catch something before others see it.
-
-After pushing, **always print the current branch name**. Then check for an existing MR on this branch:
-
-- If an MR exists: print its URL prominently as the final output line.
-- If no MR exists: **create a Draft MR automatically** using the GitLab MCP tool (`mcp__gitlab__create_merge_request`). Set `draft: true`. The user will open/ready it manually when ready. Print the newly created MR URL.
-
-**Populate the MR description:** Don't leave it blank. Include:
-- What this change does (summary)
-- Why this change exists (context from Phase 1)
-- How to test it (if not obvious)
-- Any screenshots or demo steps for UI changes
-
-Don't make reviewers hunt for context. A craftsman makes their work easy to review.
-
-**End-of-workflow output format (always):**
-
-```
-Branch: <current-branch>
-MR: <MR URL>
-```
-
-Never omit this block. It is the final line of the workflow.
-
----
-
-## Phase 8: Post-Commit Code Review (Optional)
-
-> **Craftsman mindset:** A second set of eyes catches what you missed. Code review is not criticism — it's professional courtesy and quality insurance.
-
-After pushing and creating the MR, prompt the user:
-
-```
-The commit is pushed and MR is ready. Would you like me to run a local code review?
-
-Options:
-- Yes, review the changes
-- No, skip review
-```
-
-**If user says yes:**
-
-1. **Check for available code review capabilities:**
-   - Look for installed plugins/skills related to code review
-   - Check for MCP tools that can analyze code (linters, static analysis with AI)
-   - Common code review skills: `code-review`, `review`, `critique`
-
-2. **If a code review skill is available**, activate it and run against the current diff/changes
-
-3. **If no dedicated code review skill exists**, run a comprehensive local review manually:
-   ```bash
-   # Get the diff of changes
-   git diff main...HEAD --stat
-   git diff main...HEAD
-   ```
-   Then analyze for:
-   - Code quality issues not caught by linters
-   - Potential bugs or edge cases
-   - Security concerns
-   - Performance implications
-   - Naming and readability
-   - Test coverage gaps
-
-4. **Present findings** in a structured format:
-
-   ```
-   ## Code Review Summary
-   
-   ### Issues Found
-   - [Critical] ...
-   - [Warning] ...
-   - [Suggestion] ...
-   
-   ### Positive Observations
-   - ...
-   
-   ### Recommendations
-   - ...
-   ```
-
-5. **Offer to address** any issues in a follow-up if the user wants
-
-**If user says no:** Acknowledge and end the workflow cleanly.
-
----
-
-The workflow is complete. A craftsman delivers quality work and welcomes review.
-
----
 
 ## Technical Domain References
 
@@ -509,9 +356,6 @@ clearly needed.
 | Principles — Design Patterns | [`references/principles-design-patterns.md`](references/principles-design-patterns.md) |
 | Principles — Error Handling | [`references/principles-error-handling.md`](references/principles-error-handling.md) |
 
----
-
----
 
 ## Code Analysis & Exploration
 
@@ -519,7 +363,6 @@ For codebase navigation and static analysis, see:
 
 - **[`rules/code-analysis.md`](rules/code-analysis.md)** — contextplus MCP tools, Context7 for library/framework references, and static analysis tools
 
----
 
 ## Working Style
 
