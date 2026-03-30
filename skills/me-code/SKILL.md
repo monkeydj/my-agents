@@ -1,15 +1,16 @@
 ---
 name: me-code
 description: >
-  Personalized incremental coding workflow skill that orchestrates the full development cycle per project.
-  TRIGGER this skill whenever the user provides requirements, a ticket, a spec, or a PRD and wants to
-  start implementing — even if they don't say "me-code" explicitly. Activate for phrases like:
+  Personalized Software craftsmanship-driven incremental coding workflow. Enforces quality-first development:
+  understand before implementing, plan before coding, test before committing.
+  TRIGGER whenever the user provides requirements, a ticket, spec, or PRD and wants to start
+  implementing — even if they don't say "me-code" explicitly. Activate for phrases like:
   "implement this", "code this up", "let's build this feature", "start coding based on the ticket",
   "here's the spec, let's go", "follow my coding workflow", "build it", "implement the requirements".
   Also trigger when the user pastes a Jira/Linear/GitHub issue and expects you to begin development.
-  This skill enforces branch safety, tracks the plan via TaskCreate, implements
-  changes with language-server and domain skills, runs tests, and commits + pushes with
-  conventional messages including ticket IDs.
+  This skill enforces branch safety, creates reasoned development plans with explicit "why",
+  implements with TDD and refactoring discipline, runs tests + linters, and delivers
+  clean commits with conventional messages. Quality over speed — think before type.
 ---
 
 # me-code: Personalized Incremental Coding Workflow
