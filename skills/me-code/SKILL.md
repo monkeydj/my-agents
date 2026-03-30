@@ -38,8 +38,21 @@ Run `git branch --show-current` before touching any code.
 
 ## Phase 1: Review & Analyze
 
+> **Craftsman mindset:** A software craftsman understands that quality starts before the first line of code is written. Thorough analysis prevents expensive rework and ensures the final work is maintainable, testable, and valuable.
+
 Read everything the user has provided: tickets, specs, PRDs, Jira issues, inline requirements,
 linked files. If the user referenced something without pasting it, ask for it.
+
+### Step 1: Understand the "What" and "Why"
+
+Before touching any code, articulate in your own words:
+- **What** is being built or fixed? (the explicit requirement)
+- **Why** does this need to exist? (the underlying problem or value)
+- **Who** will use this? (the user/customer perspective)
+
+If you cannot explain the "why" clearly, ask the user. A craftsman never assumes intent — they seek to understand.
+
+### Step 2: Map the Codebase (contextplus MCP)
 
 **If the contextplus MCP is available**, use it to map the codebase before reading individual
 files. Run these tools in order:
@@ -54,23 +67,57 @@ files. Run these tools in order:
 These three tools together replace most ad-hoc codebase exploration. Skip them only when
 contextplus is not configured.
 
-Identify and note:
-- **Type of change:** feature, bug fix, refactor, chore, or data migration
+### Step 3: Analyze with Craftsmanship Principles
+
+For each potential change, evaluate through the lens of Software Craftsmanship:
+
+| Principle | Questions to Ask |
+|-----------|------------------|
+| **Well-Crafted** | Will this code be readable, testable, and extendable? Does it follow existing patterns? Will future developers understand it? |
+| **Steadily Adding Value** | Does this solve the real problem? What are the downstream effects of this design choice? Is this sustainable? |
+| **Community of Professionals** | Are there existing patterns I should match? Would a peer recognize this as idiomatic? |
+| **Continuous Learning** | Am I learning something new about this codebase? Does this reveal any technical debt worth noting? |
+
+### Step 4: Identify Scope with Reasoning
+
+Document your findings with **explicit reasoning** for each decision:
+
+- **Type of change:** feature | bug fix | refactor | chore | data migration
+  - *Reasoning:* Why this classification matters for the workflow
 - **Affected scope:** which files, modules, services, or APIs are likely involved
-- **Constraints:** performance requirements, backward compatibility, framework-specific rules
+  - *Reasoning:* How you identified these through contextplus tools
+- **Technical constraints:** performance, backward compatibility, framework-specific rules
+  - *Reasoning:* Why these constraints exist and how they shape the implementation
+- **Testing approach:** Can this be tested in isolation? What are the boundaries?
+  - *Reasoning:* TDD-readiness assessment — can we write tests first?
+- **Refactoring opportunities:** Does the existing code need cleanup before adding new behavior?
+  - *Reasoning:* "Clean code first" principle — don't layer new mess on old mess
 - **Data migration flag:** if this is a migration, tests will be skipped in Phase 4
+  - *Reasoning:* Migration safety — why tests are inappropriate for schema changes
+
+### Step 5: Risk Assessment
+
+Before proceeding to Phase 2, identify:
+- **Integration points:** What other systems/modules does this touch?
+- **Breaking changes:** Could this affect existing consumers? (API, DB, contract)
+- **Rollback strategy:** How would we undo this if it fails?
+- **Edge cases:** What are the failure modes no one mentioned?
 
 If anything is ambiguous or underspecified, ask now — it's cheaper to clarify before planning
-than to backtrack mid-implementation.
+than to backtrack mid-implementation. A craftsman clarifies before acting.
 
 ---
 
 ## Phase 2: Craft & Persist the Development Plan
 
+> **Craftsman mindset:** A development plan is not just a checklist — it's a contract with future-you and your team. Each task should be intentional, each decision reasoned.
+
 Break the work into ordered, concrete tasks. Think through dependencies — what has to happen
 before what. Identify which files need to change and roughly how.
 
-**Plan format to produce:**
+### Plan Structure with Reasoning
+
+Every decision in the plan must include **why** — not just what. This follows the craftsmanship principle of "well-crafted" communication:
 
 ```
 # Plan: [Feature/Fix Name]
@@ -81,32 +128,67 @@ before what. Identify which files need to change and roughly how.
 **Ticket:** [ID if provided, e.g., BP-1234]
 **Type:** feat | fix | chore | refactor | migration
 
+## Analysis Summary
+- **Why this approach?** [Explain reasoning — e.g., "Using existing pattern X because..."]
+- **What are the risks?** [List identified risks from Phase 1]
+- **What constraints must be honored?** [Performance, backward compat, etc.]
+
 ## Implementation Steps
 
 ### 1. [First concrete task]
-- Files: [list affected files/modules]
-- Notes: [anything non-obvious]
+- **Files:** [list affected files/modules]
+- **Reasoning:** [Why this task first? What dependencies does it establish?]
+- **Craftsmanship notes:** [Any pattern matching, refactoring needs, or testability concerns]
 
 ### 2. [Second task]
+- **Files:** [list affected files/modules]
+- **Reasoning:** [Why this task follows the previous one]
+- **Craftsmanship notes:** [Edge cases, error handling, or design considerations]
+
 ...
 
 ## Test Strategy
-[unit | integration | e2e | skip — and why]
+- **Type:** unit | integration | e2e | skip
+- **Reasoning:** [Why this test approach? TDD-feasible? What boundaries are being tested?]
+- **TDD consideration:** [Can we write tests first? If not, why not?]
+
+## Code Quality Gates
+- [ ] **Readability:** Will another developer understand this in 6 months?
+- [ ] **Testability:** Can this be tested in isolation?
+- [ ] **Extensibility:** Will future changes require rewriting this?
+- [ ] **Error handling:** Are failure modes explicit and handled?
+- [ ] **Consistency:** Does this match existing codebase patterns?
+
+## Refactoring Opportunities (Optional)
+- [Any cleanup identified during analysis that could be done alongside this change]
+- **Reasoning:** [Why do this now vs. later? "If not now, when?" principle]
 
 ## Critical Files
-[Key files that will be read or modified]
+[Key files that will be read or modified — with brief notes on what aspect matters]
 ```
 
+### Task Tracking
+
 **Track the plan with TaskCreate** — create one task per implementation step immediately after
-drafting the plan. Always append these two fixed tasks at the end:
+drafting the plan. Include the reasoning as task notes when possible. Always append these two fixed tasks at the end:
 
 ```
 [ ] Commit changes (Phase 6)
 [ ] Push to remote (Phase 7)
 ```
 
+### Alignment Check
+
 Present the plan to the user and **wait for confirmation** before implementing.
 This is the most important pause in the workflow — alignment here prevents expensive rework.
+
+**Before presenting, verify:**
+1. Each task has a clear "done" state
+2. Dependencies are explicit (Task B needs Task A first)
+3. Test strategy is defensible
+4. Risks are acknowledged, not hidden
+
+A craftsman plans with the same care they write code.
 
 ---
 
