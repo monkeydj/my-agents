@@ -10,6 +10,7 @@ description: >
   "break this down before we code", "analyze the requirements", "plan the implementation".
   Also trigger when the user pastes a Jira/Linear/GitHub issue and expects analysis and planning
   before any code is written. Output: a confirmed, persisted development plan ready for me-craft.
+allowed-tools: Read, Grep, Glob, Bash, TaskCreate, get_context_tree, semantic_code_search, semantic_identifier_search, semantic_navigate, get_file_skeleton, search_memory_graph, upsert_memory_node, create_relation, undo_change
 ---
 
 # me-draft: Requirements Review & Development Planning

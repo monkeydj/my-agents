@@ -10,6 +10,7 @@ description: >
   Also trigger when the user has already reviewed requirements and wants to move to execution.
   This skill enforces TDD discipline, domain-specific best practices, clean commits with
   conventional messages, and a push + Draft MR on every completion. Quality over speed — refactor before committing.
+allowed-tools: Read, Edit, Write, Grep, Glob, Bash, TaskUpdate, get_file_skeleton, semantic_identifier_search, get_blast_radius, run_static_analysis, undo_change, search_memory_graph, upsert_memory_node, create_relation, mcp__gitlab__create_merge_request
 ---
 
 # me-craft: Craftsman Implementation Workflow
