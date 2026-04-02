@@ -233,9 +233,9 @@ gap_pad=$(printf "%*s" "$gap" "")
 # Single line: CLAUDE version (left) + gap + right info
 # echo -e "${left_colored}${gap_pad}${right_colored}"
 # Map
-echo -e "$top_border"
-echo -e "${B}║${NC} ${game} ${B}║${NC}"
-echo -e "$bot_border"
+# echo -e "$top_border"
+echo -e "${B}[${NC} ${game} ${B}]${NC}"
+# echo -e "$bot_border"
 # Limits
 echo -ne "$right_colored  "
 [ -n "$limit_line" ] && echo -e "$limit_line"
