@@ -18,6 +18,7 @@
 ## Learning & Discovery
 
 - **Learn bias**: Multiple valid paths? Pick one revealing more about codebase.
+- **Zoom out**: Unfamiliar area → go up one abstraction layer first. Map all relevant modules and callers using project's domain vocabulary before reading implementation detail.
 - **Spike first**: Unknown territory → timebox throwaway experiment before committing.
 - **Read before writing**: Understand existing patterns before adding new. Inconsistency = hidden debt.
 - **Knowledge sharing**: Document decisions; mentor others; contribute to community.
@@ -26,7 +27,7 @@
 ## Structural Impact
 
 - **Graph check**: Before big structural edits, optionally check code graph for impact. Skip small changes.
-- **Blast radius**: Before touching shared code — estimate callers, tests, modules affected.
+- **Blast radius**: Before touching shared code — estimate callers, tests, modules affected. Use domain vocabulary (not file paths) when describing impact.
 - **Module boundaries**: Minimize coupling. Depend on abstractions, not concrete implementations.
 - **Simplicity**: Prefer simple solutions; avoid premature optimization; keep functions short.
 - **Small commits**: Many small > one large. Easier to review, revert, reason about.
