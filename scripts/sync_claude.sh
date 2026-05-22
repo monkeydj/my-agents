@@ -29,7 +29,7 @@ PROFILE_ITEMS=(
     "CLAUDE.md"
     "settings.json"
     "settings.local.json"
-    "statusline.sh"
+    # "statusline.sh"
 )
 
 usage() {
