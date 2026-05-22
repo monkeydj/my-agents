@@ -41,6 +41,26 @@ usage() {
     exit 1
 }
 
+log_info() {
+    echo "INFO: $*"
+}
+
+log_ok() {
+    echo "OK: $*"
+}
+
+log_warn() {
+    echo "WARN: $*"
+}
+
+log_error() {
+    echo "ERROR: $*"
+}
+
+log_skip() {
+    echo "SKIP: $*"
+}
+
 list_available_profiles() {
     local profile_dir
 
@@ -58,7 +78,7 @@ ensure_shared() {
         shared_dir="$SHARED/$item"
         if [ ! -e "$shared_dir" ]; then
             mkdir -p "$shared_dir"
-            echo "Created shared: $shared_dir"
+            log_info "created shared directory: $shared_dir"
         fi
     done
 }
@@ -83,15 +103,17 @@ ensure_profile_dir() {
 
     if [ ! -d "$profile_dir" ]; then
         if [ -z "$source_profile" ]; then
-            echo "ERROR: profile '$profile' does not exist. Use --from <source> to create from an existing profile."
+            log_error "profile '$profile' does not exist at $profile_dir"
+            log_info "use --from <source> to create it from an existing profile"
             echo ""
-            echo "Available profiles:"
+            log_info "available profiles:"
             list_available_profiles
             exit 1
         fi
 
         mkdir -p "$profile_dir"
-        echo "Created profile: $profile_dir"
+        log_info "created profile directory: $profile_dir"
+        log_info "source profile for inheritance: $source_profile"
         return 0
     fi
 
@@ -114,13 +136,15 @@ link_shared_items() {
             if [ "$current" != "$src" ]; then
                 rm "$dst"
                 ln -s "$src" "$dst"
-                echo "Updated symlink: $dst -> $src"
+                log_info "updated shared link: $dst -> $src"
+            else
+                log_ok "shared link already correct: $dst -> $src"
             fi
         elif [ -e "$dst" ]; then
-            echo "WARN: $dst exists as regular file/dir, skipping"
+            log_warn "shared item exists as regular file/dir, skipping: $dst"
         else
             ln -s "$src" "$dst"
-            echo "Created symlink: $dst -> $src"
+            log_info "created shared link: $dst -> $src"
         fi
     done
 }
@@ -134,20 +158,20 @@ inherit_profile_items() {
     local dst_path
 
     if [ ! -d "$src_dir" ]; then
-        echo "ERROR: source profile '$source_profile' not found"
+        log_error "source profile not found: $src_dir"
         exit 1
     fi
 
-    echo "Inheriting profile items from '$source_profile':"
+    log_info "copying profile-specific items from '$source_profile' into '$profile_dir'"
     for item in "${PROFILE_ITEMS[@]}"; do
         src_path="$src_dir/$item"
         dst_path="$profile_dir/$item"
         if [ -e "$dst_path" ] || [ -L "$dst_path" ]; then
-            echo "  SKIP: $item already exists"
+            log_skip "profile item already exists: $dst_path"
         elif copy_item "$src_path" "$dst_path"; then
-            echo "  COPIED: $item"
+            log_ok "copied profile item: $src_path -> $dst_path"
         else
-            echo "  MISSING in source: $item"
+            log_warn "missing in source profile, not copied: $src_path"
         fi
     done
 }
@@ -160,7 +184,7 @@ report_missing_profile_items() {
     for item in "${PROFILE_ITEMS[@]}"; do
         path="$profile_dir/$item"
         if [ ! -e "$path" ] && [ ! -L "$path" ]; then
-            echo "MISSING: $path"
+            log_warn "missing profile-specific item: $path"
         fi
     done
 }
@@ -170,6 +194,8 @@ sync_profile() {
     local profile_dir="$PROFILES_HOME/$profile"
     local source_profile="${2:-}"
     local is_new=false
+
+    log_info "syncing profile: $profile"
 
     if ensure_profile_dir "$profile" "$profile_dir" "$source_profile"; then
         is_new=true
@@ -195,28 +221,28 @@ verify_shared_item() {
 
     if [ ! -L "$dst" ]; then
         if [ -e "$expected" ]; then
-            echo "FAIL: $dst is not a symlink"
+            log_error "shared item is not a symlink: $dst (expected -> $expected)"
             ERRORS=$((ERRORS + 1))
         else
-            echo "SKIP: $expected does not exist (source missing)"
+            log_skip "shared source missing, verification skipped: $expected"
         fi
         return
     fi
 
     actual=$(readlink "$dst")
     if [ "$actual" != "$expected" ]; then
-        echo "FAIL: $dst -> $actual (expected $expected)"
+        log_error "shared link target mismatch: $dst -> $actual (expected $expected)"
         ERRORS=$((ERRORS + 1))
         return
     fi
 
     if [ ! -e "$dst" ]; then
-        echo "FAIL: $dst -> $actual (broken symlink)"
+        log_error "broken shared symlink: $dst -> $actual"
         ERRORS=$((ERRORS + 1))
         return
     fi
 
-    echo "OK: $dst -> $actual"
+    log_ok "shared link verified: $dst -> $actual"
 }
 
 verify_profile_item() {
@@ -225,13 +251,13 @@ verify_profile_item() {
     local path="$profile_dir/$item"
 
     if [ -L "$path" ]; then
-        echo "FAIL: $path is a symlink (should be profile-specific)"
+        log_error "profile-specific item should not be a symlink: $path"
         ERRORS=$((ERRORS + 1))
     elif [ ! -e "$path" ]; then
-        echo "MISSING: $path"
+        log_warn "missing profile-specific item: $path"
         ERRORS=$((ERRORS + 1))
     else
-        echo "OK: $path (profile-specific)"
+        log_ok "profile-specific item present: $path"
     fi
 }
 
@@ -240,8 +266,10 @@ verify_profile() {
     local profile_dir="$PROFILES_HOME/$profile"
     local item
 
+    log_info "checking profile: $profile"
+
     if [ ! -d "$profile_dir" ]; then
-        echo "FAIL: profile directory '$profile_dir' does not exist"
+        log_error "profile directory does not exist: $profile_dir"
         ERRORS=$((ERRORS + 1))
         return
     fi
@@ -262,7 +290,7 @@ verify_all_profiles() {
     for profile_dir in "$PROFILES_HOME"/*/; do
         [ -d "$profile_dir" ] || continue
         profile=$(basename "$profile_dir")
-        echo "=== $profile ==="
+        log_info "verifying profile: $profile"
         verify_profile "$profile"
         echo ""
     done
@@ -278,14 +306,14 @@ parse_profile_args() {
         case "$1" in
             --from)
                 if [ -z "${2:-}" ]; then
-                    echo "ERROR: --from requires a profile name"
+                    log_error "--from requires a profile name"
                     exit 1
                 fi
                 source_profile="$2"
                 shift 2
                 ;;
             *)
-                echo "ERROR: unknown argument: $1"
+                log_error "unknown argument: $1"
                 usage
                 ;;
         esac
@@ -314,8 +342,8 @@ esac
 
 echo ""
 if [ "$ERRORS" -eq 0 ]; then
-    echo "All checks passed."
+    log_ok "all checks passed"
 else
-    echo "$ERRORS error(s) found."
+    log_error "$ERRORS error(s) found"
     exit 1
 fi
