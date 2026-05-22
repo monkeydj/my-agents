@@ -6,11 +6,12 @@ origin: custom
 
 # Diagen — Diagram Generation Skill
 
-Generate diagram source files and rendered images (SVG/PNG) from PlantUML, Mermaid, and Graphviz markup. Extract from markdown or render standalone files.
+Generate diagram source files and rendered SVG images from PlantUML, Mermaid, and Graphviz markup. Extract from markdown or render standalone files.
 
 **Priority:** Every diagram must have clear, traceable lines between components. Connections are the primary information — boxes are secondary.
 
 **Triggers:** "render diagram", "extract diagrams", "generate svg", "render puml", "render mermaid", "diagram to svg", "extract and render", "diagen"
+**Output:** SVG only — no PNG generation.
 
 ---
 
@@ -148,9 +149,6 @@ Try local tools first. Fall back to Kroki only when local tool is unavailable or
 # Primary — local CLI (homebrew)
 plantuml -tsvg {file.puml}
 
-# PNG variant
-plantuml -tpng {file.puml}
-
 # Fallback — Kroki API
 curl -s -X POST https://kroki.io/plantuml/svg \
   -H "Content-Type: text/plain" \
@@ -163,9 +161,6 @@ curl -s -X POST https://kroki.io/plantuml/svg \
 # Primary — npx (no global install needed)
 npx --yes @mermaid-js/mermaid-cli -i {file.mmd} -o {file}.svg -b transparent
 
-# PNG variant
-npx --yes @mermaid-js/mermaid-cli -i {file.mmd} -o {file}.png -b white
-
 # Fallback — Kroki API
 curl -s -X POST https://kroki.io/mermaid/svg \
   -H "Content-Type: text/plain" \
@@ -177,9 +172,6 @@ curl -s -X POST https://kroki.io/mermaid/svg \
 ```bash
 # Primary — local CLI (homebrew)
 dot -Tsvg -o {file}.svg {file.dot}
-
-# PNG variant
-dot -Tpng -o {file}.png {file.dot}
 
 # Fallback — Kroki API
 curl -s -X POST https://kroki.io/graphviz/svg \
@@ -243,9 +235,8 @@ Default: `diagrams/` relative to markdown file. Create if it doesn't exist.
 
 ## 4. Rendering Rules
 
-1. **Default format:** SVG (vector, renders in GitHub/GitLab/Confluence)
-2. **PNG:** Only when user explicitly requests or SVG render fails
-3. **Idempotency:** If source and rendered SVG both exist with identical content, skip
+1. **Output format:** SVG only (vector, renders in GitHub/GitLab/Confluence)
+2. **Idempotency:** If source and rendered SVG both exist with identical content, skip
 4. **Validation:** After render, verify output file exists and is >0 bytes. If not, report error with CLI stderr
 5. **Batch order:** Extract all first, then render all in one pass
 
@@ -295,9 +286,6 @@ Render existing source files without markdown extraction:
 
 # All files in a directory
 "render all diagrams in diagrams/"
-
-# Specific format
-"render architecture.puml to png"
 ```
 
 Directory mode: find all `.puml`, `.mmd`, `.dot` files and render each via tool priority chain.
