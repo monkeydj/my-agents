@@ -189,6 +189,43 @@ report_missing_profile_items() {
     done
 }
 
+materialize_profile_symlink() {
+    local path="$1"
+    local target
+    local tmp_path
+
+    if [ ! -L "$path" ]; then
+        return 1
+    fi
+
+    target=$(readlink "$path")
+    tmp_path="${path}.materialize.$$"
+
+    if cp -pL "$path" "$tmp_path"; then
+        rm "$path"
+        mv "$tmp_path" "$path"
+        log_info "converted profile symlink to local file: $path (from $target)"
+        return 0
+    fi
+
+    rm -f "$tmp_path"
+    log_error "failed to convert profile symlink to local file: $path (from $target)"
+    return 1
+}
+
+normalize_profile_items() {
+    local profile_dir="$1"
+    local item
+    local path
+
+    for item in "${PROFILE_ITEMS[@]}"; do
+        path="$profile_dir/$item"
+        if [ -L "$path" ]; then
+            materialize_profile_symlink "$path"
+        fi
+    done
+}
+
 sync_profile() {
     local profile="$1"
     local profile_dir="$PROFILES_HOME/$profile"
@@ -208,6 +245,8 @@ sync_profile() {
     if [ "$is_new" = true ] && [ -n "$source_profile" ]; then
         inherit_profile_items "$profile_dir" "$source_profile"
     fi
+
+    normalize_profile_items "$profile_dir"
 
     report_missing_profile_items "$profile_dir"
 }
