@@ -236,7 +236,8 @@ Default: `diagrams/` relative to markdown file. Create if it doesn't exist.
 ## 4. Rendering Rules
 
 1. **Output format:** SVG only (vector, renders in GitHub/GitLab/Confluence)
-2. **Idempotency:** If source and rendered SVG both exist with identical content, skip
+2. **PNG:** Only when user explicitly requests or SVG render fails
+3. **Idempotency:** If source and rendered SVG both exist with identical content, skip
 4. **Validation:** After render, verify output file exists and is >0 bytes. If not, report error with CLI stderr
 5. **Batch order:** Extract all first, then render all in one pass
 
