@@ -105,6 +105,19 @@ few things not settled yet:
 
 Normal prose, slightly more structured than Slack. Still casual. Use headers and bullets. No corporate boilerplate intro paragraphs.
 
+### Confluence — Formatting Rules
+
+**Header reference table (mandatory).** Every Confluence page starts with a 2-row × 4-column metadata table before any content or TOC:
+
+| Ticket | `BP-XXXX` | Status | `STATUS LOZENGE` |
+| Last Updated | `YYYY-MM-DD` | Owner | `Name` |
+
+Use `ac:structured-macro ac:name="status"` for the status cell. Colour mapping: Green = DONE/UNCHANGED, Yellow = IN PROGRESS, Blue = NEW, Red = BLOCKED.
+
+**Images always centered.** Wrap every image in `<p style="text-align: center;">`. No exceptions — inline images, diagrams, screenshots all get centered alignment.
+
+**Tables full-width with proportional columns.** Use `data-layout="full-width"` on all `<table>` elements. Set explicit `style="width:XX%;"` on each `<th>`/`<td>` in the header row, proportional to expected content length — narrow for short fields (codes, dates), wide for descriptions or names. Never leave column widths at Confluence defaults.
+
 ### MR Description
 
 For MR descriptions, use conventional format. For MR comment replies, defer to `cipher-talks` skill instead — different register.
