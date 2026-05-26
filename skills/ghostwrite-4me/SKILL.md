@@ -1,5 +1,5 @@
 ---
-description: Draft Slack messages, team updates, Confluence announcements, and MR descriptions in the user's natural voice. Trigger on "draft a message", "write a Slack message", "announce this", "craft a message for", or any request to write comms on the user's behalf.
+description: Draft Slack messages, team updates, Confluence announcements, Jira comments, and MR descriptions in the user's natural voice. Trigger on "draft a message", "write a Slack message", "announce this", "craft a message for", or any request to write comms on the user's behalf.
 ---
 
 # ghostwrite-4me
@@ -117,6 +117,35 @@ Use `ac:structured-macro ac:name="status"` for the status cell. Colour mapping: 
 **Images always centered.** Wrap every image in `<p style="text-align: center;">`. No exceptions — inline images, diagrams, screenshots all get centered alignment.
 
 **Tables full-width with proportional columns.** Use `data-layout="full-width"` on all `<table>` elements. Set explicit `style="width:XX%;"` on each `<th>`/`<td>` in the header row, proportional to expected content length — narrow for short fields (codes, dates), wide for descriptions or names. Never leave column widths at Confluence defaults.
+
+### Jira Comments — Formatting Rules
+
+The MCP `jira_add_comment` / `jira_edit_comment` tools accept markdown and convert it to Jira's internal format (ADF). The API response body shows flat text extraction — **not** the actual rendered format. Trust the UI, not the response body.
+
+**Known conversion pitfalls:**
+
+| Pitfall | Workaround |
+|---|---|
+| `+` signs silently stripped | Spell out: "and", "with", "or above" |
+| Underscores in identifiers parsed as italic (`get_eligible_orgs` → `get*eligible*orgs`) | No reliable escape — avoid underscored identifiers in bold/italic contexts, or accept minor rendering glitch |
+| Markdown tables in comments | Work but can be finicky — prefer **bold labels** with dash-separated lines for step trackers over pipe tables |
+| Backticks inside table cells | Unreliable — use plain text in table cells |
+
+**Preferred comment structure for progress trackers:**
+
+Use bold step labels as list items instead of tables:
+
+```
+## Phase Title
+
+**Step 1.1** Description here — Status
+
+**Step 1.2** Description here — Status
+```
+
+This converts cleanly to Jira headings and bold text. Avoid embedding code-style identifiers in structural formatting.
+
+**Status updates as comments, not description.** Keep the ticket description as the stable spec. Use comments for living progress — phase status, step completion, blockers. Each progress update is a new comment or edit of a pinned progress comment.
 
 ### MR Description
 
