@@ -32,6 +32,10 @@ PROFILE_ITEMS=(
     # "statusline.sh"
 )
 
+PROFILE_DIRS=(
+    "hooks.local"
+)
+
 usage() {
     echo "Usage:"
     echo "  $0 <profile>                 Sync an existing profile"
@@ -174,6 +178,18 @@ inherit_profile_items() {
             log_warn "missing in source profile, not copied: $src_path"
         fi
     done
+
+    for item in "${PROFILE_DIRS[@]}"; do
+        src_path="$src_dir/$item"
+        dst_path="$profile_dir/$item"
+        if [ -e "$dst_path" ] || [ -L "$dst_path" ]; then
+            log_skip "profile directory already exists: $dst_path"
+        elif copy_item "$src_path" "$dst_path"; then
+            log_ok "copied profile directory: $src_path -> $dst_path"
+        else
+            log_warn "missing in source profile, not copied: $src_path"
+        fi
+    done
 }
 
 report_missing_profile_items() {
@@ -181,7 +197,7 @@ report_missing_profile_items() {
     local item
     local path
 
-    for item in "${PROFILE_ITEMS[@]}"; do
+    for item in "${PROFILE_ITEMS[@]}" "${PROFILE_DIRS[@]}"; do
         path="$profile_dir/$item"
         if [ ! -e "$path" ] && [ ! -L "$path" ]; then
             log_warn "missing profile-specific item: $path"
@@ -201,7 +217,7 @@ materialize_profile_symlink() {
     target=$(readlink "$path")
     tmp_path="${path}.materialize.$$"
 
-    if cp -pL "$path" "$tmp_path"; then
+    if cp -rpL "$path" "$tmp_path"; then
         rm "$path"
         mv "$tmp_path" "$path"
         log_info "converted profile symlink to local file: $path (from $target)"
@@ -218,10 +234,26 @@ normalize_profile_items() {
     local item
     local path
 
-    for item in "${PROFILE_ITEMS[@]}"; do
+    for item in "${PROFILE_ITEMS[@]}" "${PROFILE_DIRS[@]}"; do
         path="$profile_dir/$item"
         if [ -L "$path" ]; then
             materialize_profile_symlink "$path"
+        fi
+    done
+}
+
+ensure_profile_dirs() {
+    local profile_dir="$1"
+    local item
+    local path
+
+    for item in "${PROFILE_DIRS[@]}"; do
+        path="$profile_dir/$item"
+        if [ -d "$path" ] && [ ! -L "$path" ]; then
+            log_ok "profile directory exists: $path"
+        elif [ ! -e "$path" ] && [ ! -L "$path" ]; then
+            mkdir -p "$path"
+            log_info "created profile directory: $path"
         fi
     done
 }
@@ -247,6 +279,8 @@ sync_profile() {
     fi
 
     normalize_profile_items "$profile_dir"
+
+    ensure_profile_dirs "$profile_dir"
 
     report_missing_profile_items "$profile_dir"
 }
@@ -317,7 +351,7 @@ verify_profile() {
         verify_shared_item "$profile_dir" "$item"
     done
 
-    for item in "${PROFILE_ITEMS[@]}"; do
+    for item in "${PROFILE_ITEMS[@]}" "${PROFILE_DIRS[@]}"; do
         verify_profile_item "$profile_dir" "$item"
     done
 }
