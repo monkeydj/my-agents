@@ -105,7 +105,14 @@ If handoff suggested skills:
 
 ## Composing with Other Skills
 
-- After pickup, user typically invokes `/me-craft`, `/plan`, etc.
-- Handoff contains plan → suggest `/me-craft`
-- Contains open questions/ambiguity → suggest `/plan` or `/grill-with-docs`
-- Read-only — never modifies handoff file or project files
+After loading context, suggest next skill based on handoff state:
+
+| Handoff contains | Suggest |
+|------------------|---------|
+| Confirmed plan, ready to execute | `/me-craft` (TDD cycles) or `/prp-implement` (validation loops) or `/feature-dev` (architecture-aware) |
+| Vague idea, no plan yet | `/plan` (single-PR) or `/prp-plan` (deep codebase analysis) or `/blueprint` (multi-session) |
+| Problem statement, no spec | `/prp-prd` (interactive PRD) or `/product-capability` (PRD→SRS) |
+| Plan exists but untested against domain | `/grill-with-docs` (stress-test against docs/ADRs) |
+| Implementation needed, unknown ecosystem | `/search-first` (find existing tools before coding) |
+
+Read-only — never modifies handoff file or project files.
