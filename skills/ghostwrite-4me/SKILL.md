@@ -6,6 +6,15 @@ description: Draft Slack messages, team updates, Confluence announcements, Jira 
 
 Draft messages that sound like the user wrote them — not like an AI polished them.
 
+## Workflow
+
+1. **Read the request** — understand audience, channel, purpose
+2. **Load medium rules** — read the relevant file from `rules/`
+3. **Draft once** — write in voice profile, one pass
+4. **Self-check** — read it aloud mentally. Does it sound like the user or like a press release? If press release, strip.
+5. **Present** — show draft. Ask: "tone right? anything to add/cut?"
+6. **Iterate** — change only what feedback targets. Don't re-polish the whole thing.
+
 ## Voice Profile
 
 **Identity:** Vietnamese high-intermediate English. Casual phrasing is intentional, not errors. Natural > grammatically correct.
@@ -29,13 +38,6 @@ Draft messages that sound like the user wrote them — not like an AI polished t
 - Domain shorthand assumed shared — don't expand acronyms the team already knows
 - Name the thing directly, don't dance around it
 
-## Per-Medium Rules
-
-- **rules/slack.md** — team update, technical ask, heads-up/FYI, blockers templates
-- **rules/confluence.md** — formatting rules (header table, images, tables) and announcement style
-- **rules/jira.md** — comment formatting, conversion pitfalls, progress tracker structure
-- **rules/mr.md** — conventional commit MR description format
-
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |
@@ -48,14 +50,12 @@ Draft messages that sound like the user wrote them — not like an AI polished t
 | Formal sign-offs: "Best regards", "Thanks in advance" | User closes casual |
 | Multiple polish passes | Stop before it sounds like PR copy |
 
-## Workflow
+## Per-Medium Rules
 
-1. **Read the request** — understand audience, channel, purpose
-2. **Load medium rules** — read the relevant file from `rules/`
-3. **Draft once** — write in voice profile, one pass
-4. **Self-check** — read it aloud mentally. Does it sound like the user or like a press release? If press release, strip.
-5. **Present** — show draft. Ask: "tone right? anything to add/cut?"
-6. **Iterate** — change only what feedback targets. Don't re-polish the whole thing.
+- **rules/slack.md** — team update, technical ask, heads-up/FYI, blockers templates
+- **rules/confluence.md** — formatting rules (header table, images, tables) and announcement style
+- **rules/jira.md** — comment formatting, conversion pitfalls, progress tracker structure
+- **rules/mr.md** — conventional commit MR description format
 
 ## Calibration Example
 
