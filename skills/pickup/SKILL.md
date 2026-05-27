@@ -1,46 +1,43 @@
 ---
 name: pickup
 description: >
-  Resume work from a handoff document. Finds the most relevant handoff doc for the current
-  workspace, or lists all available handoffs for the user to choose. Loads context into the
-  conversation so a fresh agent can continue seamlessly. TRIGGER when: user says "pick up",
-  "resume", "continue where we left off", "load handoff", "what was I working on",
-  "pickup the handoff", or references a prior session's work.
-argument-hint: "[optional: path to a specific handoff file]"
+  Resume work from handoff document. Find most relevant handoff doc for current
+  workspace, or list all for user to choose. Load context into conversation so
+  fresh agent can continue seamlessly. TRIGGER when: "pick up", "resume",
+  "continue where we left off", "load handoff", "what was I working on",
+  "pickup the handoff", or references prior session work.
+argument-hint: "[optional: path to specific handoff file]"
 ---
 
 # pickup: Resume from Handoff
 
-Inverse of `/handoff`. Finds and loads a handoff document so this session can continue prior work
-with full context.
+Inverse of `/handoff`. Find and load handoff doc so session can continue prior work with full context.
 
 ---
 
 ## Phase 1: Locate Handoff Documents
 
-If the user passed an argument that looks like a file path, use it directly — skip to Phase 2.
+Argument looks like file path → use directly, skip to Phase 2.
 
-Otherwise, scan for handoff docs:
+Otherwise scan:
 
-1. List markdown files in the OS temp directory (`$TMPDIR` on macOS, `/tmp` on Linux)
-   matching pattern `*handoff*` (case-insensitive)
-2. Also check the current workspace root for any `*handoff*.md` files
-3. Sort results by modification time, newest first
+1. List markdown files in OS temp dir (`$TMPDIR` on macOS, `/tmp` on Linux) matching `*handoff*` (case-insensitive)
+2. Check current workspace root for `*handoff*.md`
+3. Sort by modification time, newest first
 
-**If no handoff docs found:** Tell the user — suggest running `/handoff` in a prior session first.
-Stop here.
+**No handoff docs found:** Tell user — suggest `/handoff` in prior session. Stop.
 
 ---
 
-## Phase 2: Select the Right Document
+## Phase 2: Select Right Document
 
 ### Auto-select (single match or clear best match)
 
-Auto-select when ONE of these is true:
+Auto-select when ONE true:
 - Only one handoff doc exists
-- The most recent handoff doc references this project's directory path or repo name
+- Most recent handoff doc references this project's directory path or repo name
 
-When auto-selecting, tell the user which file you picked and why:
+Tell user which file picked and why:
 ```
 Found handoff: /tmp/handoff-my-project-2026-05-27.md (most recent, matches current repo).
 Loading context...
@@ -48,16 +45,15 @@ Loading context...
 
 ### Prompt user (multiple candidates, no clear winner)
 
-List all found handoff docs as a numbered selection using `AskUserQuestion`:
-- Show filename, modification date, and first-line summary (read line 1–3 of each)
+List all found handoff docs via `AskUserQuestion`:
+- Show filename, modification date, first-line summary (read line 1–3 of each)
 - Let user pick one
 
 ---
 
 ## Phase 3: Read and Load Context
 
-Read the selected handoff file completely. Then output a structured context briefing to the
-conversation using this format:
+Read selected handoff file completely. Output structured context briefing:
 
 ```
 ## Handoff Context Loaded
@@ -79,22 +75,20 @@ conversation using this format:
 ```
 
 **Verification rules:**
-- For every file path mentioned in the handoff → check it exists. Flag any missing paths:
-  `⚠ Referenced file not found: {path} — may have been moved or deleted`
-- For every branch mentioned → run `git branch --list {name}` to confirm it exists
-- For skill suggestions → verify each skill is available in the current environment
+- Every file path in handoff → check exists. Flag missing: `⚠ Referenced file not found: {path} — may have been moved or deleted`
+- Every branch mentioned → `git branch --list {name}` to confirm
+- Skill suggestions → verify available in current environment
 
 ---
 
 ## Phase 4: Offer to Continue
 
-After loading context, ask:
+After loading context:
 
-> Context loaded. Ready to continue — want to proceed with the suggested next steps,
-> or do you have a different direction?
+> Context loaded. Ready to continue — proceed with suggested next steps, or different direction?
 
-If the handoff doc suggested specific skills, mention them:
-> The handoff suggests using: `/me-craft`, `/security-review`. Want me to invoke one?
+If handoff suggested skills:
+> Handoff suggests: `/me-craft`, `/security-review`. Want me to invoke one?
 
 ---
 
@@ -102,16 +96,16 @@ If the handoff doc suggested specific skills, mention them:
 
 | Situation | Action |
 |-----------|--------|
-| Handoff doc is stale (>7 days old) | Warn: "This handoff is {N} days old — some references may be outdated." |
-| Handoff references a different repo | Warn: "This handoff was for {repo}, but you're in {current}. Proceed anyway?" |
-| Handoff doc contains redacted secrets | Note: "Some values were redacted in the handoff. You may need to re-provide credentials." |
-| File path argument doesn't exist | Error: "File not found: {path}. Check the path and try again." |
+| Stale (>7 days old) | Warn: "Handoff is {N} days old — references may be outdated." |
+| References different repo | Warn: "Handoff was for {repo}, you're in {current}. Proceed anyway?" |
+| Contains redacted secrets | Note: "Some values redacted. May need to re-provide credentials." |
+| File path argument missing | Error: "File not found: {path}. Check path and try again." |
 
 ---
 
 ## Composing with Other Skills
 
-- After pickup loads context, user typically invokes an execution skill (`/me-craft`, `/plan`, etc.)
-- If the handoff doc contains a plan, suggest `/me-craft` to execute it
-- If it contains open questions or ambiguity, suggest `/plan` or `/grill-with-docs` first
-- This skill is read-only — it never modifies the handoff file or any project files
+- After pickup, user typically invokes `/me-craft`, `/plan`, etc.
+- Handoff contains plan → suggest `/me-craft`
+- Contains open questions/ambiguity → suggest `/plan` or `/grill-with-docs`
+- Read-only — never modifies handoff file or project files
