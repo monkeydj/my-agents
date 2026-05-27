@@ -36,17 +36,6 @@ Draft messages that sound like the user wrote them — not like an AI polished t
 - **rules/jira.md** — comment formatting, conversion pitfalls, progress tracker structure
 - **rules/mr.md** — conventional commit MR description format
 
-## Confluence Guard
-
-**Create and publish directly.** After drafting, go ahead and create or update the Confluence page — the user will review the content in Confluence.
-
-**Page creation requires explicit approval.** Before calling `confluence_create_page`, present:
-1. Proposed page title
-2. Parent page (title + link)
-3. Content outline (key sections, not full body)
-
-Wait for user confirmation before creating. Never create Confluence pages in the same turn as the outline.
-
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |

@@ -1,5 +1,16 @@
 # Confluence — Announcements & Formatting
 
+## Publishing Guard
+
+**Create and publish directly.** After drafting, go ahead and create or update the Confluence page — the user will review the content in Confluence.
+
+**Page creation requires explicit approval.** Before calling `confluence_create_page`, present:
+1. Proposed page title
+2. Parent page (title + link)
+3. Content outline (key sections, not full body)
+
+Wait for user confirmation before creating. Never create Confluence pages in the same turn as the outline.
+
 ## Announcement / Doc Update
 
 Normal prose, slightly more structured than Slack. Still casual. Use headers and bullets. No corporate boilerplate intro paragraphs.
