@@ -1,9 +1,9 @@
 #!/bin/bash
 # Sync/setup Claude profiles - shared session, project, memory
 # Usage:
-#   ./sync_claude.sh <profile> [--from <source>] [--include-projects] [--include-history]
+#   ./sync_claude.sh <profile> [--from <source>] [--include-projects]
 #   ./sync_claude.sh <profile> --from <source>       New profile, copy profile items from source
-#   ./sync_claude.sh verify [<profile>] [--include-projects] [--include-history]
+#   ./sync_claude.sh verify [<profile>] [--include-projects]
 #   ./sync_claude.sh -h                              Show this help
 
 set -euo pipefail
@@ -13,7 +13,6 @@ PROFILES_HOME="$HOME/.claude-profiles"
 ERRORS=0
 
 INCLUDE_PROJECTS=false
-INCLUDE_HISTORY=false
 
 SHARED_ITEMS=(
     "agents-memory"
@@ -29,7 +28,6 @@ SHARED_ITEMS=(
 
 OPTIONAL_SHARED_ITEMS=(
     "projects"
-    "history"
 )
 
 PROFILE_ITEMS=(
@@ -53,8 +51,7 @@ usage() {
     echo "Options:"
     echo "  --from <src>          Create a profile by inheriting profile-specific items from <src>"
     echo "  --include-projects    Include the shared projects directory"
-    echo "  --include-history     Include the shared history directory"
-    echo "  --include <item|all>  Include projects, history, or all optional shared directories"
+    echo "  --include <item|all>  Include projects or all optional shared directories"
     exit 1
 }
 
@@ -105,33 +102,12 @@ copy_item() {
     local dst="$2"
 
     if [ -d "$src" ]; then
-        mkdir -p "$dst"
-        copy_directory_contents "$src" "$dst"
+        cp -a "$src" "$dst"
     elif [ -f "$src" ]; then
-        if [ "$(basename "$src")" = "history.jsonl" ]; then
-            return 1
-        fi
         cp "$src" "$dst"
     else
         return 1
     fi
-}
-
-copy_directory_contents() {
-    local src_dir="$1"
-    local dst_dir="$2"
-    local item
-
-    for item in "$src_dir"/.[!.]* "$src_dir"/..?* "$src_dir"/*; do
-        [ -e "$item" ] || [ -L "$item" ] || continue
-
-        if [ "$(basename "$item")" = "history.jsonl" ]; then
-            log_skip "ignored history file: $item"
-            continue
-        fi
-
-        cp -a "$item" "$dst_dir"/
-    done
 }
 
 ensure_profile_dir() {
@@ -165,9 +141,6 @@ active_shared_items() {
         printf '%s\n' "projects"
     fi
 
-    if [ "$INCLUDE_HISTORY" = true ]; then
-        printf '%s\n' "history"
-    fi
 }
 
 report_ignored_shared_items() {
@@ -177,9 +150,6 @@ report_ignored_shared_items() {
         case "$item" in
             projects)
                 [ "$INCLUDE_PROJECTS" = true ] && continue
-                ;;
-            history)
-                [ "$INCLUDE_HISTORY" = true ] && continue
                 ;;
         esac
 
@@ -208,7 +178,7 @@ copy_shared_items() {
             log_info "replaced shared symlink with copy: $dst"
         elif [ -e "$dst" ]; then
             if [ -d "$src" ] && [ -d "$dst" ]; then
-                copy_directory_contents "$src" "$dst"
+                cp -a "$src"/. "$dst"/
                 log_ok "updated shared directory copy: $src -> $dst"
             elif [ -f "$src" ] && [ -f "$dst" ]; then
                 cp -p "$src" "$dst"
@@ -468,10 +438,6 @@ parse_profile_args() {
                 INCLUDE_PROJECTS=true
                 shift
                 ;;
-            --include-history)
-                INCLUDE_HISTORY=true
-                shift
-                ;;
             --include)
                 parse_include_arg "${2:-}"
                 shift 2
@@ -492,7 +458,7 @@ parse_include_arg() {
     local item="$1"
 
     if [ -z "$item" ]; then
-        log_error "--include requires projects, history, or all"
+        log_error "--include requires projects or all"
         exit 1
     fi
 
@@ -500,12 +466,8 @@ parse_include_arg() {
         projects)
             INCLUDE_PROJECTS=true
             ;;
-        history)
-            INCLUDE_HISTORY=true
-            ;;
         all)
             INCLUDE_PROJECTS=true
-            INCLUDE_HISTORY=true
             ;;
         *)
             log_error "unknown optional shared item: $item"
@@ -523,10 +485,6 @@ parse_verify_args() {
         case "$1" in
             --include-projects)
                 INCLUDE_PROJECTS=true
-                shift
-                ;;
-            --include-history)
-                INCLUDE_HISTORY=true
                 shift
                 ;;
             --include)
