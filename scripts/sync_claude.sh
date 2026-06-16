@@ -1,9 +1,9 @@
 #!/bin/bash
 # Sync/setup Claude profiles - shared session, project, memory
 # Usage:
-#   ./sync_claude.sh <profile> [--from <source>] [--include-projects]
+#   ./sync_claude.sh <profile> [--from <source>] [--include projects]
 #   ./sync_claude.sh <profile> --from <source>       New profile, copy profile items from source
-#   ./sync_claude.sh verify [<profile>] [--include-projects]
+#   ./sync_claude.sh verify [<profile>] [--include projects]
 #   ./sync_claude.sh -h                              Show this help
 
 set -euo pipefail
@@ -50,7 +50,6 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --from <src>          Create a profile by inheriting profile-specific items from <src>"
-    echo "  --include-projects    Include the shared projects directory"
     echo "  --include <item|all>  Include projects or all optional shared directories"
     exit 1
 }
@@ -434,10 +433,6 @@ parse_profile_args() {
                 source_profile="$2"
                 shift 2
                 ;;
-            --include-projects)
-                INCLUDE_PROJECTS=true
-                shift
-                ;;
             --include)
                 parse_include_arg "${2:-}"
                 shift 2
@@ -483,10 +478,6 @@ parse_verify_args() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            --include-projects)
-                INCLUDE_PROJECTS=true
-                shift
-                ;;
             --include)
                 parse_include_arg "${2:-}"
                 shift 2
