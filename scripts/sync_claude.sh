@@ -105,12 +105,33 @@ copy_item() {
     local dst="$2"
 
     if [ -d "$src" ]; then
-        cp -a "$src" "$dst"
+        mkdir -p "$dst"
+        copy_directory_contents "$src" "$dst"
     elif [ -f "$src" ]; then
+        if [ "$(basename "$src")" = "history.jsonl" ]; then
+            return 1
+        fi
         cp "$src" "$dst"
     else
         return 1
     fi
+}
+
+copy_directory_contents() {
+    local src_dir="$1"
+    local dst_dir="$2"
+    local item
+
+    for item in "$src_dir"/.[!.]* "$src_dir"/..?* "$src_dir"/*; do
+        [ -e "$item" ] || [ -L "$item" ] || continue
+
+        if [ "$(basename "$item")" = "history.jsonl" ]; then
+            log_skip "ignored history file: $item"
+            continue
+        fi
+
+        cp -a "$item" "$dst_dir"/
+    done
 }
 
 ensure_profile_dir() {
@@ -187,7 +208,7 @@ copy_shared_items() {
             log_info "replaced shared symlink with copy: $dst"
         elif [ -e "$dst" ]; then
             if [ -d "$src" ] && [ -d "$dst" ]; then
-                cp -a "$src"/. "$dst"/
+                copy_directory_contents "$src" "$dst"
                 log_ok "updated shared directory copy: $src -> $dst"
             elif [ -f "$src" ] && [ -f "$dst" ]; then
                 cp -p "$src" "$dst"
