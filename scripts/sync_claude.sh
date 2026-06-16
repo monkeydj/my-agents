@@ -1,9 +1,9 @@
 #!/bin/bash
 # Sync/setup Claude profiles - shared session, project, memory
 # Usage:
-#   ./sync_claude.sh <profile> [--from <source>]   Create/sync a profile
+#   ./sync_claude.sh <profile> [--from <source>] [--include-projects] [--include-history]
 #   ./sync_claude.sh <profile> --from <source>       New profile, copy profile items from source
-#   ./sync_claude.sh verify [<profile>]              Verify profile(s)
+#   ./sync_claude.sh verify [<profile>] [--include-projects] [--include-history]
 #   ./sync_claude.sh -h                              Show this help
 
 set -euo pipefail
@@ -12,10 +12,12 @@ SHARED="$HOME/.claude"
 PROFILES_HOME="$HOME/.claude-profiles"
 ERRORS=0
 
+INCLUDE_PROJECTS=false
+INCLUDE_HISTORY=false
+
 SHARED_ITEMS=(
     "agents-memory"
     "sessions"
-    "projects"
     "memory"
     "plans"
     "rules"
@@ -23,6 +25,11 @@ SHARED_ITEMS=(
     "skills"
     "commands"
     "hooks"
+)
+
+OPTIONAL_SHARED_ITEMS=(
+    "projects"
+    "history"
 )
 
 PROFILE_ITEMS=(
@@ -38,10 +45,16 @@ PROFILE_DIRS=(
 
 usage() {
     echo "Usage:"
-    echo "  $0 <profile>                 Sync an existing profile"
-    echo "  $0 <profile> --from <src>    Create new profile, inheriting profile items from <src>"
-    echo "  $0 verify [<profile>]        Verify profile(s)"
-    echo "  $0 -h                        Show this help"
+    echo "  $0 <profile> [options]              Sync an existing profile"
+    echo "  $0 <profile> --from <src> [options] Create new profile, inheriting profile items from <src>"
+    echo "  $0 verify [<profile>] [options]     Verify profile(s)"
+    echo "  $0 -h                               Show this help"
+    echo ""
+    echo "Options:"
+    echo "  --from <src>          Create a profile by inheriting profile-specific items from <src>"
+    echo "  --include-projects    Include the shared projects directory"
+    echo "  --include-history     Include the shared history directory"
+    echo "  --include <item|all>  Include projects, history, or all optional shared directories"
     exit 1
 }
 
@@ -78,13 +91,13 @@ ensure_shared() {
     local item
     local shared_dir
 
-    for item in "${SHARED_ITEMS[@]}"; do
+    while IFS= read -r item; do
         shared_dir="$SHARED/$item"
         if [ ! -e "$shared_dir" ]; then
             mkdir -p "$shared_dir"
             log_info "created shared directory: $shared_dir"
         fi
-    done
+    done < <(active_shared_items)
 }
 
 copy_item() {
@@ -124,33 +137,69 @@ ensure_profile_dir() {
     return 1
 }
 
-link_shared_items() {
+active_shared_items() {
+    printf '%s\n' "${SHARED_ITEMS[@]}"
+
+    if [ "$INCLUDE_PROJECTS" = true ]; then
+        printf '%s\n' "projects"
+    fi
+
+    if [ "$INCLUDE_HISTORY" = true ]; then
+        printf '%s\n' "history"
+    fi
+}
+
+report_ignored_shared_items() {
+    local item
+
+    for item in "${OPTIONAL_SHARED_ITEMS[@]}"; do
+        case "$item" in
+            projects)
+                [ "$INCLUDE_PROJECTS" = true ] && continue
+                ;;
+            history)
+                [ "$INCLUDE_HISTORY" = true ] && continue
+                ;;
+        esac
+
+        log_skip "shared directory ignored by default: $SHARED/$item"
+    done
+}
+
+copy_shared_items() {
     local profile_dir="$1"
     local item
     local dst
     local src
-    local current
 
-    for item in "${SHARED_ITEMS[@]}"; do
+    while IFS= read -r item; do
         dst="$profile_dir/$item"
         src="$SHARED/$item"
 
-        if [ -L "$dst" ]; then
-            current=$(readlink "$dst")
-            if [ "$current" != "$src" ]; then
-                rm "$dst"
-                ln -s "$src" "$dst"
-                log_info "updated shared link: $dst -> $src"
-            else
-                log_ok "shared link already correct: $dst -> $src"
-            fi
-        elif [ -e "$dst" ]; then
-            log_warn "shared item exists as regular file/dir, skipping: $dst"
-        else
-            ln -s "$src" "$dst"
-            log_info "created shared link: $dst -> $src"
+        if [ ! -e "$src" ]; then
+            log_warn "shared source missing, not copied: $src"
+            continue
         fi
-    done
+
+        if [ -L "$dst" ]; then
+            rm "$dst"
+            copy_item "$src" "$dst"
+            log_info "replaced shared symlink with copy: $dst"
+        elif [ -e "$dst" ]; then
+            if [ -d "$src" ] && [ -d "$dst" ]; then
+                cp -a "$src"/. "$dst"/
+                log_ok "updated shared directory copy: $src -> $dst"
+            elif [ -f "$src" ] && [ -f "$dst" ]; then
+                cp -p "$src" "$dst"
+                log_ok "updated shared file copy: $src -> $dst"
+            else
+                log_warn "shared item exists with different type, skipping: $dst"
+            fi
+        else
+            copy_item "$src" "$dst"
+            log_info "created shared copy: $src -> $dst"
+        fi
+    done < <(active_shared_items)
 }
 
 inherit_profile_items() {
@@ -272,7 +321,9 @@ sync_profile() {
 
     ensure_shared
 
-    link_shared_items "$profile_dir"
+    report_ignored_shared_items
+
+    copy_shared_items "$profile_dir"
 
     if [ "$is_new" = true ] && [ -n "$source_profile" ]; then
         inherit_profile_items "$profile_dir" "$source_profile"
@@ -290,32 +341,37 @@ verify_shared_item() {
     local item="$2"
     local dst="$profile_dir/$item"
     local expected="$SHARED/$item"
-    local actual
 
-    if [ ! -L "$dst" ]; then
-        if [ -e "$expected" ]; then
-            log_error "shared item is not a symlink: $dst (expected -> $expected)"
-            ERRORS=$((ERRORS + 1))
-        else
-            log_skip "shared source missing, verification skipped: $expected"
-        fi
+    if [ ! -e "$expected" ]; then
+        log_skip "shared source missing, verification skipped: $expected"
         return
     fi
 
-    actual=$(readlink "$dst")
-    if [ "$actual" != "$expected" ]; then
-        log_error "shared link target mismatch: $dst -> $actual (expected $expected)"
+    if [ -L "$dst" ]; then
+        log_error "shared item should be a copy, not a symlink: $dst"
         ERRORS=$((ERRORS + 1))
         return
     fi
 
     if [ ! -e "$dst" ]; then
-        log_error "broken shared symlink: $dst -> $actual"
+        log_error "missing shared copy: $dst (expected copy of $expected)"
         ERRORS=$((ERRORS + 1))
         return
     fi
 
-    log_ok "shared link verified: $dst -> $actual"
+    if [ -d "$expected" ] && [ ! -d "$dst" ]; then
+        log_error "shared copy type mismatch: $dst (expected directory)"
+        ERRORS=$((ERRORS + 1))
+        return
+    fi
+
+    if [ -f "$expected" ] && [ ! -f "$dst" ]; then
+        log_error "shared copy type mismatch: $dst (expected file)"
+        ERRORS=$((ERRORS + 1))
+        return
+    fi
+
+    log_ok "shared copy verified: $dst"
 }
 
 verify_profile_item() {
@@ -347,9 +403,11 @@ verify_profile() {
         return
     fi
 
-    for item in "${SHARED_ITEMS[@]}"; do
+    report_ignored_shared_items
+
+    while IFS= read -r item; do
         verify_shared_item "$profile_dir" "$item"
-    done
+    done < <(active_shared_items)
 
     for item in "${PROFILE_ITEMS[@]}" "${PROFILE_DIRS[@]}"; do
         verify_profile_item "$profile_dir" "$item"
@@ -385,6 +443,18 @@ parse_profile_args() {
                 source_profile="$2"
                 shift 2
                 ;;
+            --include-projects)
+                INCLUDE_PROJECTS=true
+                shift
+                ;;
+            --include-history)
+                INCLUDE_HISTORY=true
+                shift
+                ;;
+            --include)
+                parse_include_arg "${2:-}"
+                shift 2
+                ;;
             *)
                 log_error "unknown argument: $1"
                 usage
@@ -397,13 +467,76 @@ parse_profile_args() {
     verify_profile "$profile"
 }
 
+parse_include_arg() {
+    local item="$1"
+
+    if [ -z "$item" ]; then
+        log_error "--include requires projects, history, or all"
+        exit 1
+    fi
+
+    case "$item" in
+        projects)
+            INCLUDE_PROJECTS=true
+            ;;
+        history)
+            INCLUDE_HISTORY=true
+            ;;
+        all)
+            INCLUDE_PROJECTS=true
+            INCLUDE_HISTORY=true
+            ;;
+        *)
+            log_error "unknown optional shared item: $item"
+            usage
+            ;;
+    esac
+}
+
+parse_verify_args() {
+    shift
+
+    local profile=""
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --include-projects)
+                INCLUDE_PROJECTS=true
+                shift
+                ;;
+            --include-history)
+                INCLUDE_HISTORY=true
+                shift
+                ;;
+            --include)
+                parse_include_arg "${2:-}"
+                shift 2
+                ;;
+            -*)
+                log_error "unknown argument: $1"
+                usage
+                ;;
+            *)
+                if [ -n "$profile" ]; then
+                    log_error "unexpected argument: $1"
+                    usage
+                fi
+                profile="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [ -n "$profile" ]; then
+        verify_profile "$profile"
+    else
+        verify_all_profiles
+    fi
+}
+
 case "${1:-}" in
     verify)
-        if [ -n "${2:-}" ]; then
-            verify_profile "$2"
-        else
-            verify_all_profiles
-        fi
+        parse_verify_args "$@"
         ;;
     ""|-h|--help)
         usage
