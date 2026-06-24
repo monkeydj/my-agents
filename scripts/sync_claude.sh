@@ -1,10 +1,10 @@
 #!/bin/bash
 # Sync/setup Claude profiles - shared session, project, memory
 # Usage:
-#   ./sync_claude.sh <profile> [--from <source>] [--include projects]
-#   ./sync_claude.sh <profile> --from <source>       New profile, copy profile items from source
-#   ./sync_claude.sh verify [<profile>] [--include projects]
-#   ./sync_claude.sh -h                              Show this help
+#   ./sync_claude.sh <profile> [--from <source>]   Create/sync a profile
+#   ./sync_claude.sh <profile> --from <source>     New profile, copy profile items from source
+#   ./sync_claude.sh verify [<profile>]            Verify profile(s)
+#   ./sync_claude.sh -h                            Show this help
 
 set -euo pipefail
 
@@ -12,11 +12,13 @@ SHARED="$HOME/.claude"
 PROFILES_HOME="$HOME/.claude-profiles"
 ERRORS=0
 
-INCLUDE_PROJECTS=false
-
+# Authored content distributed one-way from $SHARED into each profile.
+# Runtime/history state (projects, sessions, history.jsonl, file-history) is
+# intentionally excluded: each profile owns it and Claude Code writes it in
+# place. Copying it would duplicate it, go stale, and clobber a profile's own
+# sessions on the next sync.
 SHARED_ITEMS=(
     "agents-memory"
-    "sessions"
     "memory"
     "plans"
     "rules"
@@ -24,10 +26,6 @@ SHARED_ITEMS=(
     "skills"
     "commands"
     "hooks"
-)
-
-OPTIONAL_SHARED_ITEMS=(
-    "projects"
 )
 
 PROFILE_ITEMS=(
@@ -43,14 +41,10 @@ PROFILE_DIRS=(
 
 usage() {
     echo "Usage:"
-    echo "  $0 <profile> [options]              Sync an existing profile"
-    echo "  $0 <profile> --from <src> [options] Create new profile, inheriting profile items from <src>"
-    echo "  $0 verify [<profile>] [options]     Verify profile(s)"
-    echo "  $0 -h                               Show this help"
-    echo ""
-    echo "Options:"
-    echo "  --from <src>          Create a profile by inheriting profile-specific items from <src>"
-    echo "  --include <item|all>  Include projects or all optional shared directories"
+    echo "  $0 <profile>                 Sync an existing profile"
+    echo "  $0 <profile> --from <src>    Create new profile, inheriting profile items from <src>"
+    echo "  $0 verify [<profile>]        Verify profile(s)"
+    echo "  $0 -h                        Show this help"
     exit 1
 }
 
@@ -87,13 +81,13 @@ ensure_shared() {
     local item
     local shared_dir
 
-    while IFS= read -r item; do
+    for item in "${SHARED_ITEMS[@]}"; do
         shared_dir="$SHARED/$item"
         if [ ! -e "$shared_dir" ]; then
             mkdir -p "$shared_dir"
             log_info "created shared directory: $shared_dir"
         fi
-    done < <(active_shared_items)
+    done
 }
 
 copy_item() {
@@ -133,36 +127,13 @@ ensure_profile_dir() {
     return 1
 }
 
-active_shared_items() {
-    printf '%s\n' "${SHARED_ITEMS[@]}"
-
-    if [ "$INCLUDE_PROJECTS" = true ]; then
-        printf '%s\n' "projects"
-    fi
-
-}
-
-report_ignored_shared_items() {
-    local item
-
-    for item in "${OPTIONAL_SHARED_ITEMS[@]}"; do
-        case "$item" in
-            projects)
-                [ "$INCLUDE_PROJECTS" = true ] && continue
-                ;;
-        esac
-
-        log_skip "shared directory ignored by default: $SHARED/$item"
-    done
-}
-
 copy_shared_items() {
     local profile_dir="$1"
     local item
     local dst
     local src
 
-    while IFS= read -r item; do
+    for item in "${SHARED_ITEMS[@]}"; do
         dst="$profile_dir/$item"
         src="$SHARED/$item"
 
@@ -189,7 +160,7 @@ copy_shared_items() {
             copy_item "$src" "$dst"
             log_info "created shared copy: $src -> $dst"
         fi
-    done < <(active_shared_items)
+    done
 }
 
 inherit_profile_items() {
@@ -311,8 +282,6 @@ sync_profile() {
 
     ensure_shared
 
-    report_ignored_shared_items
-
     copy_shared_items "$profile_dir"
 
     if [ "$is_new" = true ] && [ -n "$source_profile" ]; then
@@ -393,11 +362,9 @@ verify_profile() {
         return
     fi
 
-    report_ignored_shared_items
-
-    while IFS= read -r item; do
+    for item in "${SHARED_ITEMS[@]}"; do
         verify_shared_item "$profile_dir" "$item"
-    done < <(active_shared_items)
+    done
 
     for item in "${PROFILE_ITEMS[@]}" "${PROFILE_DIRS[@]}"; do
         verify_profile_item "$profile_dir" "$item"
@@ -433,10 +400,6 @@ parse_profile_args() {
                 source_profile="$2"
                 shift 2
                 ;;
-            --include)
-                parse_include_arg "${2:-}"
-                shift 2
-                ;;
             *)
                 log_error "unknown argument: $1"
                 usage
@@ -449,28 +412,6 @@ parse_profile_args() {
     verify_profile "$profile"
 }
 
-parse_include_arg() {
-    local item="$1"
-
-    if [ -z "$item" ]; then
-        log_error "--include requires projects or all"
-        exit 1
-    fi
-
-    case "$item" in
-        projects)
-            INCLUDE_PROJECTS=true
-            ;;
-        all)
-            INCLUDE_PROJECTS=true
-            ;;
-        *)
-            log_error "unknown optional shared item: $item"
-            usage
-            ;;
-    esac
-}
-
 parse_verify_args() {
     shift
 
@@ -478,10 +419,6 @@ parse_verify_args() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            --include)
-                parse_include_arg "${2:-}"
-                shift 2
-                ;;
             -*)
                 log_error "unknown argument: $1"
                 usage
