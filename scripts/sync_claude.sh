@@ -147,12 +147,13 @@ copy_shared_items() {
             copy_item "$src" "$dst"
             log_info "replaced shared symlink with copy: $dst"
         elif [ -e "$dst" ]; then
-            if [ -d "$src" ] && [ -d "$dst" ]; then
-                cp -a "$src"/. "$dst"/
-                log_ok "updated shared directory copy: $src -> $dst"
-            elif [ -f "$src" ] && [ -f "$dst" ]; then
-                cp -p "$src" "$dst"
-                log_ok "updated shared file copy: $src -> $dst"
+            if { [ -d "$src" ] && [ -d "$dst" ]; } || { [ -f "$src" ] && [ -f "$dst" ]; }; then
+                # Remove then recopy so the profile is an exact mirror of $SHARED:
+                # this drops files deleted from source and overwrites read-only
+                # files (e.g. 0444 hashes) that cp cannot open for writing.
+                rm -rf "$dst"
+                copy_item "$src" "$dst"
+                log_ok "refreshed shared copy: $src -> $dst"
             else
                 log_warn "shared item exists with different type, skipping: $dst"
             fi
@@ -198,6 +199,29 @@ inherit_profile_items() {
             log_ok "copied profile directory: $src_path -> $dst_path"
         else
             log_warn "missing in source profile, not copied: $src_path"
+        fi
+    done
+}
+
+seed_profile_items_from_shared() {
+    local profile_dir="$1"
+    local item
+    local src_path
+    local dst_path
+
+    for item in "${PROFILE_ITEMS[@]}"; do
+        src_path="$SHARED/$item"
+        dst_path="$profile_dir/$item"
+
+        if [ -e "$dst_path" ] || [ -L "$dst_path" ]; then
+            continue
+        fi
+        if [ ! -e "$src_path" ]; then
+            continue
+        fi
+
+        if copy_item "$src_path" "$dst_path"; then
+            log_ok "seeded profile item from shared: $src_path -> $dst_path"
         fi
     done
 }
@@ -287,6 +311,8 @@ sync_profile() {
     if [ "$is_new" = true ] && [ -n "$source_profile" ]; then
         inherit_profile_items "$profile_dir" "$source_profile"
     fi
+
+    seed_profile_items_from_shared "$profile_dir"
 
     normalize_profile_items "$profile_dir"
 
