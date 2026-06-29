@@ -1,0 +1,69 @@
+# CLI tools inventory — ranked by shell history frequency
+# Source: brew list --installed-on-request + ~/.zsh_history (6668 entries)
+# Tiers: T1=daily, T2=regular, T3=project-specific, T4=shell-startup
+
+# ---- TIER 1 — Daily drivers (>50 history hits or core aliases) ----
+zoxide          # z/zi — frequency-weighted smart cd (230+ history uses via z/zi)
+eza             # ll alias — modern ls with git status, icons, color
+neovim          # nvim — primary editor (124 history uses)
+git             # version control backbone (238 direct + 500+ via gcam/gsb/gco aliases)
+lazygit         # tui git interface (in .zshrc; heavy alias usage)
+fzf             # fuzzy finder — powers many aliases and tab-completion
+ripgrep         # rg — fast grep; drives crg/crgviz aliases
+fd              # fast find replacement
+podman          # container engine — OCI-compatible docker alternative (55 uses)
+colima          # container runtime VM for docker/podman on macOS
+curl            # http client (36 uses, + many scripts)
+tlrc            # tldr — command cheatsheets (69 history uses, installed as tldr)
+
+# ---- TIER 2 — Regular use (<50 hits but intentionally installed) ----
+gh              # GitHub CLI — PRs, issues, releases
+glab            # GitLab CLI — MRs, CI, pipelines
+git-delta       # delta — better git diff pager with syntax highlighting
+btop            # resource monitor — CPU/mem/disk/net TUI
+dust            # du replacement — visual disk usage
+yazi            # terminal file manager with preview
+television      # tv — fuzzy file/content finder (TV = fzf on steroids)
+navi            # interactive cheatsheet browser
+pgcli           # psql replacement with autocomplete and syntax highlight
+lazysql         # TUI SQL browser for postgres/mysql/sqlite
+docker          # docker CLI (26 uses; paired with colima)
+docker-compose  # multi-container orchestration
+
+# ---- TIER 3 — Project / domain specific ----
+postgresql@14   # postgres server — local dev database
+mysql           # mysql server — legacy project databases
+libpq           # provides psql, pg_dump, pg_restore CLIs
+libmemcached    # memcached CLI tools (memcstat, memccat)
+ffmpeg          # video/audio conversion and processing
+graphviz        # dot — DAG/graph rendering (drives crgviz alias)
+plantuml        # UML diagrams from text
+scala           # JVM language runtime
+node            # Node.js runtime (npx 77 uses, npm 30 uses)
+python@3.10     # Python interpreter (75 history uses)
+openjdk@11      # Java 11 LTS — required for plantuml/scala
+gcc             # C/C++ compiler toolchain
+pipx            # isolated Python CLI app installer
+source-highlight # syntax highlighting for less/cat
+
+# ---- TIER 4 — Shell startup / prompt (no direct invocation) ----
+starship        # cross-shell prompt — loaded via .zshrc eval
+tmux            # terminal multiplexer — session persistence
+zellij          # modern terminal multiplexer with layouts
+watchman        # file watcher daemon — used by dev servers
+
+# ---- UTILITIES ----
+wget            # file downloader (alternative to curl)
+coreutils       # GNU coreutils — gdate, gls, gsort etc on macOS
+make            # build automation
+unzip           # archive extraction
+socat           # socket relay — port forwarding, proxy chains
+xclip           # X11 clipboard (useful via SSH/remote sessions)
+pass            # password manager — GPG-encrypted credential store
+terminal-notifier  # macOS notification from shell scripts
+docker-credential-helper  # docker login credential store
+docker-compose  # (see T2)
+
+# ---- CUSTOM / WORKSPACE ----
+rtk             # Rust Token Killer — Claude Code token-saving proxy (19 history uses)
+worktrunk       # wt — worktree helper, 225 history uses via wt alias
