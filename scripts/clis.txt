@@ -67,3 +67,6 @@ docker-compose  # (see T2)
 # ---- CUSTOM / WORKSPACE ----
 rtk             # Rust Token Killer — Claude Code token-saving proxy (19 history uses)
 worktrunk       # wt — worktree helper, 225 history uses via wt alias
+
+# ---- REFERENCES ----
+# https://github.com/0xjuanma/golazo
