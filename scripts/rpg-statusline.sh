@@ -33,6 +33,7 @@ CYAN="${ESC}[38;5;51m"
 BLUE="${ESC}[38;5;39m"
 PURPLE="${ESC}[38;5;141m"
 GOLD="${ESC}[38;5;220m"
+DIMGOLD="${ESC}[38;5;136m"                          # notional cost — tarnished coin
 GREY="${ESC}[38;5;245m"
 
 # ----- Muted palette (line 2: world/context, recedes behind vitals) -------
@@ -165,6 +166,15 @@ mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
 [ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
+# 💰 honesty: a present 5h budget means a quota plan, where the dollar figure is
+# notional (API-equivalent), not real spend — mark with ~ and mute it so MP reads as
+# the real currency. No budget field (API pay-go likely) → real spend → keep vivid.
+if [ "$mp_known" -eq 1 ]; then
+    cost_color="$DIMGOLD"; cost_prefix="~"
+else
+    cost_color="$GOLD"; cost_prefix=""
+fi
+
 # Low-HP warning glyph
 hp_icon="❤️ "
 [ "$hp_pct" -lt 15 ] && hp_icon="💔"
@@ -207,7 +217,7 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💰 %s¢%s' "$GOLD" "$cost_cents" "$RESET"
+printf '%s💰 %s%s¢%s' "$cost_color" "$cost_prefix" "$cost_cents" "$RESET"
 printf '%s' "$SEP"
 printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
 
