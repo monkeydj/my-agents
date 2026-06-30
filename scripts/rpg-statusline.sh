@@ -5,7 +5,9 @@
 #          transcript-derived fallback).
 # 🔮 MP  = Mana = your 5-hour rate-limit budget remaining (REAL: statusline
 #          .rate_limits.five_hour). Full MP = full 5h budget; MP drains as you
-#          consume the window, and shows a ⟳ regen countdown to the next reset.
+#          consume rate-limit quota (NOT context), and shows a ⟳ regen
+#          countdown to the next reset. If the field is absent MP shows ??% —
+#          a missing budget is never rendered as a full bar.
 #
 # Wire it up in settings.json:
 #   "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
@@ -87,13 +89,25 @@ hp_pct=$(( 100 - ctx_used_pct ))
 [ "$hp_pct" -gt 100 ] && hp_pct=100
 
 # ----- MP: 5-hour rate-limit budget remaining -----------------------------
-# Read straight from the statusline's .rate_limits.five_hour.
+# Read straight from the statusline's .rate_limits.five_hour. If the field is
+# absent we DON'T fake a full bar — we mark MP unknown so a missing budget never
+# reads as "plenty left".
 five_used="$five_used_in"
 five_reset="$five_reset_in"
-five_used_int="$(printf '%.0f' "${five_used:-0}" 2>/dev/null || echo 0)"
-mp_pct=$(( 100 - five_used_int ))
-[ "$mp_pct" -lt 0 ] && mp_pct=0
-[ "$mp_pct" -gt 100 ] && mp_pct=100
+mp_known=1
+mp_pct=0
+if [ -n "$five_used" ]; then
+    five_used_int="$(printf '%.0f' "$five_used" 2>/dev/null || echo "")"
+    if [ -n "$five_used_int" ]; then
+        mp_pct=$(( 100 - five_used_int ))
+        [ "$mp_pct" -lt 0 ] && mp_pct=0
+        [ "$mp_pct" -gt 100 ] && mp_pct=100
+    else
+        mp_known=0
+    fi
+else
+    mp_known=0
+fi
 
 # MP regen countdown to the next 5h reset.
 mp_reset_str=""
@@ -137,6 +151,7 @@ health_color() {
 hp_color="$(health_color "$hp_pct")"
 mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
+[ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
 # Low-HP warning glyph
 hp_icon="❤️ "
@@ -149,10 +164,16 @@ printf '%s🧙 %sLv.%s%s  ' "$PURPLE" "$BOLD" "$class_short" "$RESET"
 printf '%s%s%s %sHP%s %s %s%3d%%%s  ' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
-printf '%s🔮 %sMP%s %s %s%3d%%%s' \
-    "$CYAN" "$BOLD" "$RESET" \
-    "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
-[ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
+if [ "$mp_known" -eq 1 ]; then
+    printf '%s🔮 %sMP%s %s %s%3d%%%s' \
+        "$CYAN" "$BOLD" "$RESET" \
+        "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
+    [ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
+else
+    printf '%s🔮 %sMP%s %s %s ??%%%s' \
+        "$CYAN" "$BOLD" "$RESET" \
+        "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
+fi
 printf '  '
 printf '%s💰 %s¢%s  ' "$GOLD" "$cost_cents" "$RESET"
 printf '%s⚔️  +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
