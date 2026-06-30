@@ -216,8 +216,42 @@ class_for_model() {
 }
 class_for_model
 
-printf '%s%s %sLv.%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET"
-printf '%s' "$SEP"
+# ----- Git (computed before line 1 — status tokens on line 1, branch on line 2) ---
+shorten_path() {
+    local p="$1" max=30
+    case "$p" in "$HOME"/*|"$HOME") p="~${p#"$HOME"}" ;; esac
+    [ "${#p}" -gt "$max" ] && p="…${p: -$max}"
+    printf '%s' "$p"
+}
+
+gs_tokens=""
+add_tok() {
+    if [ -n "$gs_tokens" ]; then gs_tokens="$gs_tokens $1"; else gs_tokens="$1"; fi
+}
+
+branch="" ; is_worktree=0
+if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    gd="$(git -C "$cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
+    case "$gd" in */worktrees/*) is_worktree=1 ;; esac
+    porc="$(git -C "$cwd" status --porcelain 2>/dev/null || true)"
+    staged="$(printf '%s\n' "$porc" | grep -cE '^[MADRC]' || true)"
+    unstaged="$(printf '%s\n' "$porc" | grep -cE '^.[MD]' || true)"
+    untracked="$(printf '%s\n' "$porc" | grep -c '^??' || true)"
+    ahead=0 ; behind=0
+    ab="$(git -C "$cwd" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null || true)"
+    if [ -n "$ab" ]; then
+        behind="$(printf '%s' "$ab" | awk '{print $1+0}')"
+        ahead="$(printf '%s' "$ab" | awk '{print $2+0}')"
+    fi
+    [ "$staged" -gt 0 ]    && add_tok "$(printf '%s+%s%s' "$M_SAGE" "$staged" "$RESET")"
+    [ "$unstaged" -gt 0 ]  && add_tok "$(printf '%s!%s%s' "$M_TAN" "$unstaged" "$RESET")"
+    [ "$untracked" -gt 0 ] && add_tok "$(printf '%s?%s%s' "$GREY" "$untracked" "$RESET")"
+    [ "$ahead" -gt 0 ]     && add_tok "$(printf '%s↑%s%s' "$M_TEAL" "$ahead" "$RESET")"
+    [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$M_LAVENDER" "$behind" "$RESET")"
+fi
+
+# ----- Line 1: vitals — HP → MP → cost → git-status → lines-changed ------
 printf '%s%s%s%sHP%s %s %s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
@@ -234,69 +268,29 @@ else
 fi
 printf '%s' "$SEP"
 printf '%s💸 %s%s%s' "$cost_color" "$cost_prefix" "$cost_label" "$RESET"
+if [ -n "$branch" ]; then
+    printf '%s' "$SEP"
+    if [ -n "$gs_tokens" ]; then
+        printf '%s' "$gs_tokens"
+    else
+        printf '%s✓%s' "$M_SAGE" "$RESET"
+    fi
+fi
 printf '%s' "$SEP"
 printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
 
-# ----- Second line: location, git, runtimes --------------------------------
-# ~-relative path, tail-truncated so a deep tree never blows the line out.
-shorten_path() {
-    local p="$1" max=30
-    case "$p" in "$HOME"/*|"$HOME") p="~${p#"$HOME"}" ;; esac
-    [ "${#p}" -gt "$max" ] && p="…${p: -$max}"
-    printf '%s' "$p"
-}
-
-# Append a token to the git-status string with single-space separation.
-gs_tokens=""
-add_tok() {
-    if [ -n "$gs_tokens" ]; then gs_tokens="$gs_tokens $1"; else gs_tokens="$1"; fi
-}
-
-branch="" ; is_worktree=0 ; git_status=""
-if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-    # A linked worktree's git-dir always lives under <repo>/.git/worktrees/<name>.
-    gd="$(git -C "$cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
-    case "$gd" in */worktrees/*) is_worktree=1 ;; esac
-    # Detailed status, suffixed onto the branch insight:
-    #   +N staged · !N unstaged · ?N untracked · ↑N ahead · ↓N behind · ✓ clean
-    porc="$(git -C "$cwd" status --porcelain 2>/dev/null || true)"
-    staged="$(printf '%s\n' "$porc" | grep -cE '^[MADRC]' || true)"
-    unstaged="$(printf '%s\n' "$porc" | grep -cE '^.[MD]' || true)"
-    untracked="$(printf '%s\n' "$porc" | grep -c '^??' || true)"
-    ahead=0 ; behind=0
-    ab="$(git -C "$cwd" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null || true)"
-    if [ -n "$ab" ]; then
-        behind="$(printf '%s' "$ab" | awk '{print $1+0}')"
-        ahead="$(printf '%s' "$ab" | awk '{print $2+0}')"
-    fi
-
-    [ "$staged" -gt 0 ]    && add_tok "$(printf '%s+%s%s' "$M_SAGE" "$staged" "$RESET")"
-    [ "$unstaged" -gt 0 ]  && add_tok "$(printf '%s!%s%s' "$M_TAN" "$unstaged" "$RESET")"
-    [ "$untracked" -gt 0 ] && add_tok "$(printf '%s?%s%s' "$GREY" "$untracked" "$RESET")"
-    [ "$ahead" -gt 0 ]     && add_tok "$(printf '%s↑%s%s' "$M_TEAL" "$ahead" "$RESET")"
-    [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$M_LAVENDER" "$behind" "$RESET")"
-
-    if [ -n "$gs_tokens" ]; then
-        git_status=" $gs_tokens"
-    else
-        git_status="$(printf ' %s✓%s' "$M_SAGE" "$RESET")"
-    fi
-fi
+# ----- Line 2: context — class → dir → branch → runtimes -----------------
+dir_icon="🏰"
+[ "$is_worktree" -eq 1 ] && dir_icon="🛖"
 
 py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
-# RPG-style location icon: the main repo is your castle, a worktree is an
-# outlying hut. Both are single-codepoint glyphs (no variation selector) so
-# they don't break the single-space rule.
-dir_icon="🏰"
-[ "$is_worktree" -eq 1 ] && dir_icon="🛖"
-
 segs=()
+segs+=("$(printf '%s%s %sLv.%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
-[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s%s' "$M_SAGE" "$branch" "$RESET" "$git_status")")
+[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s' "$M_SAGE" "$branch" "$RESET")")
 [ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$M_TAN" "$py" "$RESET")")
 [ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET")")
 
