@@ -210,21 +210,21 @@ shorten_path() {
     printf '%s' "$p"
 }
 
-branch="" ; wt="" ; git_status=""
+branch="" ; is_worktree=0 ; git_status=""
 if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-    [ "${#branch}" -gt 28 ] && branch="…${branch: -28}"
     # A linked worktree's git-dir differs from the repo's common git-dir.
     gd="$(git -C "$cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
     gc="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
     case "$gc" in /*) : ;; *) gc="$cwd/$gc" ;; esac
-    [ -n "$gd" ] && [ "$gd" != "$gc" ] && wt=" ${DIM}wt${RESET}"
+    [ -n "$gd" ] && [ "$gd" != "$gc" ] && is_worktree=1
     dirty="$(git -C "$cwd" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
     [ -z "$dirty" ] && dirty=0
+    # Git status is suffixed onto the branch insight (leading space included).
     if [ "$dirty" -gt 0 ]; then
-        git_status="$(printf '%s●%s%s' "$YELLOW" "$dirty" "$RESET")"
+        git_status="$(printf ' %s●%s%s' "$YELLOW" "$dirty" "$RESET")"
     else
-        git_status="$(printf '%s✓%s' "$GREEN" "$RESET")"
+        git_status="$(printf ' %s✓%s' "$GREEN" "$RESET")"
     fi
 fi
 
@@ -232,12 +232,15 @@ py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
+# RPG-style location icon; a worktree gets the 🌿 branch glyph instead.
+dir_icon="🏰"
+[ "$is_worktree" -eq 1 ] && dir_icon="🌿"
+
 segs=()
-segs+=("$(printf '%s📁 %s%s' "$BLUE" "$(shorten_path "$cwd")" "$RESET")")
-[ -n "$branch" ]     && segs+=("$(printf '%s🌿 %s%s%s' "$GREEN" "$branch" "$RESET" "$wt")")
-[ -n "$git_status" ] && segs+=("$git_status")
-[ -n "$py" ]         && segs+=("$(printf '%s🐍 %s%s' "$YELLOW" "$py" "$RESET")")
-[ -n "$node" ]       && segs+=("$(printf '%s⬢ %s%s' "$GREEN" "$node" "$RESET")")
+segs+=("$(printf '%s%s %s%s' "$BLUE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
+[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s%s' "$GREEN" "$branch" "$RESET" "$git_status")")
+[ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$YELLOW" "$py" "$RESET")")
+[ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$GREEN" "$node" "$RESET")")
 
 line2=""
 for s in "${segs[@]}"; do
