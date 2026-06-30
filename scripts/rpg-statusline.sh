@@ -133,8 +133,13 @@ if [ -n "$five_reset" ]; then
     fi
 fi
 
-# Cost in cents for the 💸 segment.
+# Cost for the 💸 segment — ¢ under $1, $X.XX at $1+.
 cost_cents="$(printf '%.0f' "$(echo "${cost_usd:-0} * 100" | bc -l 2>/dev/null || echo 0)" 2>/dev/null || echo 0)"
+if [ "${cost_cents:-0}" -ge 100 ]; then
+    cost_label="$(printf '$%.2f' "${cost_usd:-0}")"
+else
+    cost_label="${cost_cents}¢"
+fi
 
 # ----- Bar renderer -------------------------------------------------------
 # render_bar <pct> <filled_color> : prints "[████░░░░░░]"
@@ -228,7 +233,7 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💸 %s%s¢%s' "$cost_color" "$cost_prefix" "$cost_cents" "$RESET"
+printf '%s💸 %s%s%s' "$cost_color" "$cost_prefix" "$cost_label" "$RESET"
 printf '%s' "$SEP"
 printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
 
