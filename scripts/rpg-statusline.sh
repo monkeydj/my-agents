@@ -47,6 +47,8 @@ cost_usd="$(jqget '.cost.total_cost_usd // 0')"
 lines_added="$(jqget '.cost.total_lines_added // 0')"
 lines_removed="$(jqget '.cost.total_lines_removed // 0')"
 exceeds_200k="$(jqget '.exceeds_200k_tokens // false')"
+cwd="$(jqget '.workspace.current_dir // .cwd // empty')"
+[ -z "$cwd" ] && cwd="$PWD"
 
 # Real context + rate-limit fields (present in current statusline contract)
 ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
@@ -158,22 +160,88 @@ hp_icon="❤️ "
 [ "$hp_pct" -lt 15 ] && hp_icon="💔"
 
 # ----- Compose statusline -------------------------------------------------
-class_short="$(printf '%s' "$model_name" | tr '[:lower:]' '[:upper:]' | cut -c1-8)"
+# Single-space discipline: segments are divided by a dim │ with exactly one
+# space on each side, so no run of >1 space appears anywhere on the line.
+SEP=" ${DIM}${GREY}│${RESET} "
 
-printf '%s🧙 %sLv.%s%s  ' "$PURPLE" "$BOLD" "$class_short" "$RESET"
-printf '%s%s%s %sHP%s %s %s%3d%%%s  ' \
+# Map the model to an RPG class. Claude tiers get themed classes; anything else
+# (GPT, Gemini, local models, …) is a hired MERCENARY.
+class_for_model() {
+    local hay
+    hay="$(printf '%s %s' "$model_id" "$model_name" | tr '[:upper:]' '[:lower:]')"
+    case "$hay" in
+        *opus*)   printf 'ARCHMAGE' ;;
+        *sonnet*) printf 'WIZARD' ;;
+        *haiku*)  printf 'ROGUE' ;;
+        *fable*)  printf 'BARD' ;;
+        *claude*) printf 'ADVENTURER' ;;
+        *)        printf 'MERCENARY' ;;
+    esac
+}
+class_short="$(class_for_model)"
+
+printf '%s🧙 %sLv.%s%s' "$PURPLE" "$BOLD" "$class_short" "$RESET"
+printf '%s' "$SEP"
+printf '%s%s%s%sHP%s %s %s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
+printf '%s' "$SEP"
 if [ "$mp_known" -eq 1 ]; then
-    printf '%s🔮 %sMP%s %s %s%3d%%%s' \
+    printf '%s🔮 %sMP%s %s %s%d%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
         "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
     [ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
 else
-    printf '%s🔮 %sMP%s %s %s ??%%%s' \
+    printf '%s🔮 %sMP%s %s %s??%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
-printf '  '
-printf '%s💰 %s¢%s  ' "$GOLD" "$cost_cents" "$RESET"
-printf '%s⚔️  +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+printf '%s' "$SEP"
+printf '%s💰 %s¢%s' "$GOLD" "$cost_cents" "$RESET"
+printf '%s' "$SEP"
+printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+
+# ----- Second line: location, git, runtimes --------------------------------
+# ~-relative path, tail-truncated so a deep tree never blows the line out.
+shorten_path() {
+    local p="$1" max=30
+    case "$p" in "$HOME"/*|"$HOME") p="~${p#"$HOME"}" ;; esac
+    [ "${#p}" -gt "$max" ] && p="…${p: -$max}"
+    printf '%s' "$p"
+}
+
+branch="" ; wt="" ; git_status=""
+if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    [ "${#branch}" -gt 28 ] && branch="…${branch: -28}"
+    # A linked worktree's git-dir differs from the repo's common git-dir.
+    gd="$(git -C "$cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
+    gc="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+    case "$gc" in /*) : ;; *) gc="$cwd/$gc" ;; esac
+    [ -n "$gd" ] && [ "$gd" != "$gc" ] && wt=" ${DIM}wt${RESET}"
+    dirty="$(git -C "$cwd" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+    [ -z "$dirty" ] && dirty=0
+    if [ "$dirty" -gt 0 ]; then
+        git_status="$(printf '%s●%s%s' "$YELLOW" "$dirty" "$RESET")"
+    else
+        git_status="$(printf '%s✓%s' "$GREEN" "$RESET")"
+    fi
+fi
+
+py="" ; node=""
+command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
+command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
+
+segs=()
+segs+=("$(printf '%s📁 %s%s' "$BLUE" "$(shorten_path "$cwd")" "$RESET")")
+[ -n "$branch" ]     && segs+=("$(printf '%s🌿 %s%s%s' "$GREEN" "$branch" "$RESET" "$wt")")
+[ -n "$git_status" ] && segs+=("$git_status")
+[ -n "$py" ]         && segs+=("$(printf '%s🐍 %s%s' "$YELLOW" "$py" "$RESET")")
+[ -n "$node" ]       && segs+=("$(printf '%s⬢ %s%s' "$GREEN" "$node" "$RESET")")
+
+line2=""
+for s in "${segs[@]}"; do
+    [ -n "$line2" ] && line2="${line2}${SEP}"
+    line2="${line2}${s}"
+done
+printf '%s\n' "$line2"
