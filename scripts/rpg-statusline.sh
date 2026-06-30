@@ -44,6 +44,7 @@ M_TAN="${ESC}[38;5;179m"      # python, unstaged
 M_TEAL="${ESC}[38;5;73m"      # ahead
 M_LAVENDER="${ESC}[38;5;103m" # behind
 M_MOSS="${ESC}[38;5;72m"      # node
+M_RUST="${ESC}[38;5;173m"    # dirty branch — aged terracotta ink on worn map
 # untracked keeps GREY (245) — already muted
 
 # ----- Read stdin ---------------------------------------------------------
@@ -290,7 +291,11 @@ command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | 
 segs=()
 segs+=("$(printf '%s%s %sLv.%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
-[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s' "$M_SAGE" "$branch" "$RESET")")
+if [ -n "$branch" ]; then
+    branch_color="$M_SAGE"
+    [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
+    segs+=("$(printf '%s🌿 %s%s' "$branch_color" "$branch" "$RESET")")
+fi
 [ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$M_TAN" "$py" "$RESET")")
 [ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET")")
 
