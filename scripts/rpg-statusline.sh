@@ -210,19 +210,39 @@ shorten_path() {
     printf '%s' "$p"
 }
 
+# Append a token to the git-status string with single-space separation.
+gs_tokens=""
+add_tok() {
+    if [ -n "$gs_tokens" ]; then gs_tokens="$gs_tokens $1"; else gs_tokens="$1"; fi
+}
+
 branch="" ; is_worktree=0 ; git_status=""
 if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-    # A linked worktree's git-dir differs from the repo's common git-dir.
+    # A linked worktree's git-dir always lives under <repo>/.git/worktrees/<name>.
     gd="$(git -C "$cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
-    gc="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
-    case "$gc" in /*) : ;; *) gc="$cwd/$gc" ;; esac
-    [ -n "$gd" ] && [ "$gd" != "$gc" ] && is_worktree=1
-    dirty="$(git -C "$cwd" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
-    [ -z "$dirty" ] && dirty=0
-    # Git status is suffixed onto the branch insight (leading space included).
-    if [ "$dirty" -gt 0 ]; then
-        git_status="$(printf ' %s●%s%s' "$YELLOW" "$dirty" "$RESET")"
+    case "$gd" in */worktrees/*) is_worktree=1 ;; esac
+    # Detailed status, suffixed onto the branch insight:
+    #   +N staged · !N unstaged · ?N untracked · ↑N ahead · ↓N behind · ✓ clean
+    porc="$(git -C "$cwd" status --porcelain 2>/dev/null || true)"
+    staged="$(printf '%s\n' "$porc" | grep -cE '^[MADRC]' || true)"
+    unstaged="$(printf '%s\n' "$porc" | grep -cE '^.[MD]' || true)"
+    untracked="$(printf '%s\n' "$porc" | grep -c '^??' || true)"
+    ahead=0 ; behind=0
+    ab="$(git -C "$cwd" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null || true)"
+    if [ -n "$ab" ]; then
+        behind="$(printf '%s' "$ab" | awk '{print $1+0}')"
+        ahead="$(printf '%s' "$ab" | awk '{print $2+0}')"
+    fi
+
+    [ "$staged" -gt 0 ]    && add_tok "$(printf '%s+%s%s' "$GREEN" "$staged" "$RESET")"
+    [ "$unstaged" -gt 0 ]  && add_tok "$(printf '%s!%s%s' "$YELLOW" "$unstaged" "$RESET")"
+    [ "$untracked" -gt 0 ] && add_tok "$(printf '%s?%s%s' "$GREY" "$untracked" "$RESET")"
+    [ "$ahead" -gt 0 ]     && add_tok "$(printf '%s↑%s%s' "$CYAN" "$ahead" "$RESET")"
+    [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$PURPLE" "$behind" "$RESET")"
+
+    if [ -n "$gs_tokens" ]; then
+        git_status=" $gs_tokens"
     else
         git_status="$(printf ' %s✓%s' "$GREEN" "$RESET")"
     fi
@@ -235,7 +255,7 @@ command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | 
 # RPG-style location icon: the main repo is your castle, a worktree is an
 # outlying hut. Both are single-codepoint glyphs (no variation selector) so
 # they don't break the single-space rule.
-dir_icon="🏯"
+dir_icon="🏰"
 [ "$is_worktree" -eq 1 ] && dir_icon="🛖"
 
 segs=()
