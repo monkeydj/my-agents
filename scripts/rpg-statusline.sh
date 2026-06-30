@@ -184,23 +184,34 @@ hp_icon="❤️ "
 # space on each side, so no run of >1 space appears anywhere on the line.
 SEP=" ${DIM}${GREY}│${RESET} "
 
-# Map the model to an RPG class. Claude tiers get themed classes; anything else
-# (GPT, Gemini, local models, …) is a hired MERCENARY.
+# Map the model to a DnD-style class + emoji. Claude tiers get themed classes;
+# the major outside vendors each get their own class; unknown → MERCENARY.
+# Sets two globals: class_icon (party-sheet glyph) and class_short (the name).
+# o-series uses the trailing dash (o3-) so bare "o1"/"o3" can't false-match an id/hash.
+class_icon="🗿"
+class_short="MERCENARY"
 class_for_model() {
     local hay
     hay="$(printf '%s %s' "$model_id" "$model_name" | tr '[:upper:]' '[:lower:]')"
     case "$hay" in
-        *opus*)   printf 'ARCHMAGE' ;;
-        *sonnet*) printf 'WIZARD' ;;
-        *haiku*)  printf 'ROGUE' ;;
-        *fable*)  printf 'BARD' ;;
-        *claude*) printf 'ADVENTURER' ;;
-        *)        printf 'MERCENARY' ;;
+        *opus*)                   class_icon="🧙"; class_short="ARCHMAGE"  ;; # deepest reasoning → arcane elder
+        *sonnet*)                 class_icon="🪄"; class_short="WIZARD"    ;; # best all-round coder → trained mage
+        *haiku*)                  class_icon="🗡️"; class_short="ROGUE"     ;; # fast & cheap → nimble striker
+        *fable*)                  class_icon="🎵"; class_short="BARD"      ;; # creative/storyteller → performer
+        *gpt*|*openai*|*o1-*|*o3-*|*o4-*) class_icon="😈"; class_short="WARLOCK" ;; # power via an outside patron
+        *gemini*)                 class_icon="🏹"; class_short="RANGER"    ;; # broad-reach search/tooling → tracker
+        *llama*)                  class_icon="🌿"; class_short="DRUID"     ;; # open/wild weights → nature shifter
+        *mistral*|*mixtral*)      class_icon="🛡️"; class_short="PALADIN"   ;; # French chivalry → oath-bound knight
+        *grok*)                   class_icon="🪓"; class_short="BARBARIAN" ;; # brash & edgy → rage fighter
+        *deepseek*)               class_icon="🧘"; class_short="MONK"      ;; # the deep seeker → disciplined ascetic
+        *qwen*)                   class_icon="⛪"; class_short="CLERIC"    ;; # steady support model → faith healer
+        *claude*)                 class_icon="🧭"; class_short="ADVENTURER";; # unrecognized Claude → generic hero
+        *)                        class_icon="🗿"; class_short="MERCENARY" ;; # unknown vendor → hired sword
     esac
 }
-class_short="$(class_for_model)"
+class_for_model
 
-printf '%s🧙 %sLv.%s%s' "$PURPLE" "$BOLD" "$class_short" "$RESET"
+printf '%s%s %sLv.%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET"
 printf '%s' "$SEP"
 printf '%s%s%s%sHP%s %s %s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
