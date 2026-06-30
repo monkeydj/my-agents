@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # rpg-statusline.sh — Retro RPG statusline for Claude Code
 #
-# ❤️  HP  = Context window remaining (REAL: read from the session transcript)
-# 🔮 MP  = "Mana" — a PROXY for API budget. Claude Code does NOT expose real
-#          rate-limit headers (anthropic-ratelimit-*) to statusline scripts,
-#          so MP is derived from session cost vs MANA_BUDGET_USD below.
-#          It is a spend gauge, NOT your true rate limit.
+# ❤️  HP  = Context window remaining (REAL: statusline .context_window, with a
+#          transcript-derived fallback).
+# 🔮 MP  = Mana = your 5-hour rate-limit budget remaining (REAL: statusline
+#          .rate_limits.five_hour). Full MP = full 5h budget; MP drains as you
+#          consume the window, and shows a ⟳ regen countdown to the next reset.
 #
 # Wire it up in settings.json:
 #   "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
@@ -16,8 +16,7 @@ set -euo pipefail
 
 # ----- Config -------------------------------------------------------------
 BAR_WIDTH=10
-MANA_BUDGET_USD="${RPG_MANA_BUDGET_USD:-5.00}"   # session "mana pool" in USD
-DEFAULT_CTX_WINDOW=200000                         # tokens, standard window
+DEFAULT_CTX_WINDOW=200000                          # tokens, standard window
 
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
@@ -47,6 +46,12 @@ lines_added="$(jqget '.cost.total_lines_added // 0')"
 lines_removed="$(jqget '.cost.total_lines_removed // 0')"
 exceeds_200k="$(jqget '.exceeds_200k_tokens // false')"
 
+# Real context + rate-limit fields (present in current statusline contract)
+ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
+ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
+five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
+five_reset_in="$(jqget '.rate_limits.five_hour.resets_at // empty')"
+
 # ----- Context window size (1M models carry "[1m]" in the id) ------------
 ctx_window=$DEFAULT_CTX_WINDOW
 case "$model_id" in
@@ -54,34 +59,55 @@ case "$model_id" in
 esac
 [ "$exceeds_200k" = "true" ] && [ "$ctx_window" -lt 1000000 ] && ctx_window=1000000
 
-# ----- HP: real context occupancy from the transcript --------------------
-# Sum of the most recent usage record: input + cache_read + cache_creation.
-ctx_used=0
-if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-    ctx_used="$(tail -n 200 "$transcript" 2>/dev/null | jq -s '
-        [ .[]
-          | select(.message.usage != null)
-          | .message.usage
-          | (.input_tokens // 0)
-            + (.cache_read_input_tokens // 0)
-            + (.cache_creation_input_tokens // 0)
-        ] | last // 0' 2>/dev/null || echo 0)"
+# ----- HP: context remaining ---------------------------------------------
+# Prefer the statusline's own context_window.used_percentage; otherwise sum the
+# most recent transcript usage (input + cache_read + cache_creation).
+[ -n "$ctx_size_in" ] && ctx_window="$ctx_size_in"
+ctx_used_pct=""
+[ -n "$ctx_pct_in" ] && ctx_used_pct="$(printf '%.0f' "$ctx_pct_in" 2>/dev/null || echo "")"
+if [ -z "$ctx_used_pct" ]; then
+    ctx_used=0
+    if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+        ctx_used="$(tail -n 200 "$transcript" 2>/dev/null | jq -s '
+            [ .[]
+              | select(.message.usage != null)
+              | .message.usage
+              | (.input_tokens // 0)
+                + (.cache_read_input_tokens // 0)
+                + (.cache_creation_input_tokens // 0)
+            ] | last // 0' 2>/dev/null || echo 0)"
+    fi
+    [ -z "$ctx_used" ] && ctx_used=0
+    ctx_used_pct=$(( ctx_used * 100 / ctx_window ))
 fi
-[ -z "$ctx_used" ] && ctx_used=0
 
 # HP = % of context still free. Filling context = taking damage.
-hp_pct=$(( 100 - (ctx_used * 100 / ctx_window) ))
+hp_pct=$(( 100 - ctx_used_pct ))
 [ "$hp_pct" -lt 0 ] && hp_pct=0
 [ "$hp_pct" -gt 100 ] && hp_pct=100
 
-# ----- MP: cost-based proxy (see header note) -----------------------------
-# Integer math in cents to avoid floating point.
-cost_cents="$(printf '%.0f' "$(echo "$cost_usd * 100" | bc -l 2>/dev/null || echo 0)" 2>/dev/null || echo 0)"
-budget_cents="$(printf '%.0f' "$(echo "$MANA_BUDGET_USD * 100" | bc -l 2>/dev/null || echo 500)" 2>/dev/null || echo 500)"
-[ "$budget_cents" -le 0 ] && budget_cents=500
-mp_pct=$(( 100 - (cost_cents * 100 / budget_cents) ))
+# ----- MP: 5-hour rate-limit budget remaining -----------------------------
+# Read straight from the statusline's .rate_limits.five_hour.
+five_used="$five_used_in"
+five_reset="$five_reset_in"
+five_used_int="$(printf '%.0f' "${five_used:-0}" 2>/dev/null || echo 0)"
+mp_pct=$(( 100 - five_used_int ))
 [ "$mp_pct" -lt 0 ] && mp_pct=0
 [ "$mp_pct" -gt 100 ] && mp_pct=100
+
+# MP regen countdown to the next 5h reset.
+mp_reset_str=""
+if [ -n "$five_reset" ]; then
+    now="$(date +%s)"
+    diff=$(( five_reset - now ))
+    if [ "$diff" -gt 0 ]; then
+        rh=$(( diff / 3600 )); rm=$(( (diff % 3600) / 60 ))
+        if [ "$rh" -gt 0 ]; then mp_reset_str="$(printf '%dh%dm' "$rh" "$rm")"; else mp_reset_str="$(printf '%dm' "$rm")"; fi
+    fi
+fi
+
+# Cost in cents for the 💰 segment.
+cost_cents="$(printf '%.0f' "$(echo "${cost_usd:-0} * 100" | bc -l 2>/dev/null || echo 0)" 2>/dev/null || echo 0)"
 
 # ----- Bar renderer -------------------------------------------------------
 # render_bar <pct> <filled_color> : prints "[████░░░░░░]"
@@ -123,8 +149,10 @@ printf '%s🧙 %sLv.%s%s  ' "$PURPLE" "$BOLD" "$class_short" "$RESET"
 printf '%s%s%s %sHP%s %s %s%3d%%%s  ' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
-printf '%s🔮 %sMP%s %s %s%3d%%%s  ' \
+printf '%s🔮 %sMP%s %s %s%3d%%%s' \
     "$CYAN" "$BOLD" "$RESET" \
     "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
+[ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
+printf '  '
 printf '%s💰 %s¢%s  ' "$GOLD" "$cost_cents" "$RESET"
 printf '%s⚔️  +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
