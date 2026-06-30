@@ -203,10 +203,10 @@ class_for_model() {
         *llama*)                  class_icon="🌿"; class_short="DRUID"     ;; # open/wild weights → nature shifter
         *mistral*|*mixtral*)      class_icon="🛡️"; class_short="PALADIN"   ;; # French chivalry → oath-bound knight
         *grok*)                   class_icon="🪓"; class_short="BARBARIAN" ;; # brash & edgy → rage fighter
-        *deepseek*)               class_icon="🧘"; class_short="MONK"      ;; # the deep seeker → disciplined ascetic
-        *qwen*)                   class_icon="⛪"; class_short="CLERIC"    ;; # steady support model → faith healer
-        *claude*)                 class_icon="🧭"; class_short="ADVENTURER";; # unrecognized Claude → generic hero
-        *)                        class_icon="🗿"; class_short="MERCENARY" ;; # unknown vendor → hired sword
+        *deepseek*)               class_icon="🌀"; class_short="MONK"      ;; # the deep seeker → disciplined ascetic
+        *qwen*)                   class_icon="📖"; class_short="CLERIC"    ;; # steady support model → faith healer
+        *claude*)                 class_icon="🎲"; class_short="ADVENTURER";; # unrecognized Claude → generic hero
+        *)                        class_icon="🏴‍☠️"; class_short="MERCENARY" ;; # unknown vendor → hired sword
     esac
 }
 class_for_model
