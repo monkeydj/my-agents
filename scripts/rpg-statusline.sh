@@ -35,6 +35,16 @@ PURPLE="${ESC}[38;5;141m"
 GOLD="${ESC}[38;5;220m"
 GREY="${ESC}[38;5;245m"
 
+# ----- Muted palette (line 2: world/context, recedes behind vitals) -------
+# Desaturated "parchment map" band — keeps line 2 from competing with line 1.
+M_SLATE="${ESC}[38;5;67m"     # path / location
+M_SAGE="${ESC}[38;5;108m"     # branch, staged, clean
+M_TAN="${ESC}[38;5;179m"      # python, unstaged
+M_TEAL="${ESC}[38;5;73m"      # ahead
+M_LAVENDER="${ESC}[38;5;103m" # behind
+M_MOSS="${ESC}[38;5;72m"      # node
+# untracked keeps GREY (245) — already muted
+
 # ----- Read stdin ---------------------------------------------------------
 input="$(cat)"
 
@@ -235,16 +245,16 @@ if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tr
         ahead="$(printf '%s' "$ab" | awk '{print $2+0}')"
     fi
 
-    [ "$staged" -gt 0 ]    && add_tok "$(printf '%s+%s%s' "$GREEN" "$staged" "$RESET")"
-    [ "$unstaged" -gt 0 ]  && add_tok "$(printf '%s!%s%s' "$YELLOW" "$unstaged" "$RESET")"
+    [ "$staged" -gt 0 ]    && add_tok "$(printf '%s+%s%s' "$M_SAGE" "$staged" "$RESET")"
+    [ "$unstaged" -gt 0 ]  && add_tok "$(printf '%s!%s%s' "$M_TAN" "$unstaged" "$RESET")"
     [ "$untracked" -gt 0 ] && add_tok "$(printf '%s?%s%s' "$GREY" "$untracked" "$RESET")"
-    [ "$ahead" -gt 0 ]     && add_tok "$(printf '%s↑%s%s' "$CYAN" "$ahead" "$RESET")"
-    [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$PURPLE" "$behind" "$RESET")"
+    [ "$ahead" -gt 0 ]     && add_tok "$(printf '%s↑%s%s' "$M_TEAL" "$ahead" "$RESET")"
+    [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$M_LAVENDER" "$behind" "$RESET")"
 
     if [ -n "$gs_tokens" ]; then
         git_status=" $gs_tokens"
     else
-        git_status="$(printf ' %s✓%s' "$GREEN" "$RESET")"
+        git_status="$(printf ' %s✓%s' "$M_SAGE" "$RESET")"
     fi
 fi
 
@@ -259,10 +269,10 @@ dir_icon="🏰"
 [ "$is_worktree" -eq 1 ] && dir_icon="🛖"
 
 segs=()
-segs+=("$(printf '%s%s %s%s' "$BLUE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
-[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s%s' "$GREEN" "$branch" "$RESET" "$git_status")")
-[ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$YELLOW" "$py" "$RESET")")
-[ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$GREEN" "$node" "$RESET")")
+segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
+[ -n "$branch" ] && segs+=("$(printf '%s🌿 %s%s%s' "$M_SAGE" "$branch" "$RESET" "$git_status")")
+[ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$M_TAN" "$py" "$RESET")")
+[ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET")")
 
 line2=""
 for s in "${segs[@]}"; do
