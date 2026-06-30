@@ -232,9 +232,11 @@ py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
-# RPG-style location icon; a worktree gets the 🌿 branch glyph instead.
-dir_icon="🏰"
-[ "$is_worktree" -eq 1 ] && dir_icon="🌿"
+# RPG-style location icon: the main repo is your castle, a worktree is an
+# outlying hut. Both are single-codepoint glyphs (no variation selector) so
+# they don't break the single-space rule.
+dir_icon="🏯"
+[ "$is_worktree" -eq 1 ] && dir_icon="🛖"
 
 segs=()
 segs+=("$(printf '%s%s %s%s' "$BLUE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
