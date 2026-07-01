@@ -227,6 +227,14 @@ if [ -z "$model_level" ]; then
 fi
 [ -z "$model_level" ] && model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+' | head -n1 || true)"
 
+# x10 folds the version's decimal into a clean integer level (4.8 → 48, 5 → 50).
+# %.0f rounds — plain %d would floor 4.8*10 to 47. Unknown version → ??.
+if [ -n "$model_level" ]; then
+    model_level="$(awk -v v="$model_level" 'BEGIN{printf "%.0f", v*10}')"
+else
+    model_level="??"
+fi
+
 # ----- Git (computed before line 1 — status tokens on line 1, branch on line 2) ---
 shorten_path() {
     local p="$1" max=30
@@ -299,12 +307,8 @@ command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
 segs=()
-if [ -n "$model_level" ]; then
-    segs+=("$(printf '%s%s %s%s%s %slv.%s%s' \
-        "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET")")
-else
-    segs+=("$(printf '%s%s %s%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET")")
-fi
+segs+=("$(printf '%s%s %s%s%s %slv.%s%s' \
+    "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
