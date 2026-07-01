@@ -217,6 +217,16 @@ class_for_model() {
 }
 class_for_model
 
+# Model version → RPG "level" (e.g. Opus 4.8 → lv.4.8). Search name + id together:
+# dotted major.minor first (4.8), then dash-joined (4-5 → 4.5), else a lone major (5).
+# Ordered so a trailing date suffix (…-20251001) never wins over the real version.
+ver_hay="$model_name $model_id"
+model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+\.[0-9]+' | head -n1 || true)"
+if [ -z "$model_level" ]; then
+    model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+-[0-9]+' | head -n1 | tr '-' '.' || true)"
+fi
+[ -z "$model_level" ] && model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+' | head -n1 || true)"
+
 # ----- Git (computed before line 1 — status tokens on line 1, branch on line 2) ---
 shorten_path() {
     local p="$1" max=30
@@ -289,7 +299,12 @@ command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
 segs=()
-segs+=("$(printf '%s%s %sLv.%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET")")
+if [ -n "$model_level" ]; then
+    segs+=("$(printf '%s%s %s%s%s %slv.%s%s' \
+        "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET")")
+else
+    segs+=("$(printf '%s%s %s%s%s' "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET")")
+fi
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
