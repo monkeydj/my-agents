@@ -1,28 +1,19 @@
 #!/usr/bin/env bash
 # rpg-statusline.sh — Retro RPG statusline for Claude Code
 #
-# ❤️  HP  = Context window remaining (REAL: statusline .context_window, with a
-#          transcript-derived fallback).
-# 🔮 MP  = Mana = your 5-hour rate-limit budget remaining (REAL: statusline
-#          .rate_limits.five_hour). Full MP = full 5h budget; MP drains as you
-#          consume rate-limit quota (NOT context), and shows a ⟳ regen
-#          countdown to the next reset. If the field is absent MP shows ??% —
-#          a missing budget is never rendered as a full bar.
-# 💸 Coin = weekly (7-day) estimated tokens USED = rate_limits.seven_day
-#          .used_percentage × WEEKLY_TOKEN_BUDGET (config below). "~" = estimate;
-#          "??" (grey) = the weekly window is absent from the payload.
+# ❤️  HP   = context window remaining (.context_window; transcript fallback)
+# 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
+# 💸 Coin = weekly tokens used ≈ .rate_limits.seven_day.used_percentage × WEEKLY_TOKEN_BUDGET; "~" estimate, "??" absent
 #
-# Wire it up in settings.json:
-#   "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
-#
-# Input: a JSON object on stdin (Claude Code statusline contract).
+# settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
+# Input: JSON object on stdin (statusline contract).
 
 set -euo pipefail
 
 # ----- Config -------------------------------------------------------------
 BAR_WIDTH=10
-DEFAULT_CTX_WINDOW=200000                          # tokens, standard window
-WEEKLY_TOKEN_BUDGET=5000000                         # EDIT: your plan's weekly token allowance
+DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
+WEEKLY_TOKEN_BUDGET=5000000  # EDIT: your plan's weekly token allowance
 
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
@@ -37,26 +28,25 @@ CYAN="${ESC}[38;5;51m"
 BLUE="${ESC}[38;5;39m"
 PURPLE="${ESC}[38;5;141m"
 GOLD="${ESC}[38;5;220m"
-DIMGOLD="${ESC}[38;5;136m"                          # notional cost — tarnished coin
+DIMGOLD="${ESC}[38;5;136m"                          # tarnished coin
 GREY="${ESC}[38;5;245m"
 
-# ----- Muted palette (line 2: world/context, recedes behind vitals) -------
-# Desaturated "parchment map" band — keeps line 2 from competing with line 1.
+# ----- Muted palette (line 2 world/context, recedes behind vitals) --------
 M_SLATE="${ESC}[38;5;67m"     # path / location
 M_SAGE="${ESC}[38;5;108m"     # branch, staged, clean
 M_TAN="${ESC}[38;5;179m"      # python, unstaged
 M_TEAL="${ESC}[38;5;73m"      # ahead
 M_LAVENDER="${ESC}[38;5;103m" # behind
 M_MOSS="${ESC}[38;5;72m"      # node
-M_RUST="${ESC}[38;5;173m"    # dirty branch — aged terracotta ink on worn map
-# untracked keeps GREY (245) — already muted
+M_RUST="${ESC}[38;5;173m"    # dirty branch
+# untracked keeps GREY (245)
 
 # ----- Read stdin ---------------------------------------------------------
 input="$(cat)"
 
 jqget() { printf '%s' "$input" | jq -r "$1" 2>/dev/null || true; }
 
-# human_duration <seconds> : "2d4h" (>=1d), "3h12m" (>=1h), "45m" (else). Empty if <=0.
+# human_duration <seconds> → "2d4h" / "3h12m" / "45m"; empty if <=0
 human_duration() {
     local s="$1"
     if [ "$s" -le 0 ] 2>/dev/null; then printf ''; return; fi
@@ -66,7 +56,7 @@ human_duration() {
     else printf '%dm' "$m"; fi
 }
 
-# format_tokens <int> : humanize — 1400000→"1.4M", 920000→"920K", 12000→"12K", else raw.
+# format_tokens <int> → "1.4M" / "920K" / "12K" / raw
 format_tokens() {
     awk -v n="$1" 'BEGIN{
         if (n>=1000000) printf "%.1fM", n/1000000;
@@ -84,7 +74,7 @@ exceeds_200k="$(jqget '.exceeds_200k_tokens // false')"
 cwd="$(jqget '.workspace.current_dir // .cwd // empty')"
 [ -z "$cwd" ] && cwd="$PWD"
 
-# Real context + rate-limit fields (present in current statusline contract)
+# Real context + rate-limit fields from the statusline contract
 ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
 ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
 five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
@@ -100,8 +90,7 @@ esac
 [ "$exceeds_200k" = "true" ] && [ "$ctx_window" -lt 1000000 ] && ctx_window=1000000
 
 # ----- HP: context remaining ---------------------------------------------
-# Prefer the statusline's own context_window.used_percentage; otherwise sum the
-# most recent transcript usage (input + cache_read + cache_creation).
+# Prefer statusline's used_percentage; else sum latest transcript usage.
 [ -n "$ctx_size_in" ] && ctx_window="$ctx_size_in"
 ctx_used_pct=""
 [ -n "$ctx_pct_in" ] && ctx_used_pct="$(printf '%.0f' "$ctx_pct_in" 2>/dev/null || echo "")"
@@ -121,15 +110,13 @@ if [ -z "$ctx_used_pct" ]; then
     ctx_used_pct=$(( ctx_used * 100 / ctx_window ))
 fi
 
-# HP = % of context still free. Filling context = taking damage.
+# HP = % context still free (filling context = damage).
 hp_pct=$(( 100 - ctx_used_pct ))
 [ "$hp_pct" -lt 0 ] && hp_pct=0
 [ "$hp_pct" -gt 100 ] && hp_pct=100
 
 # ----- MP: 5-hour rate-limit budget remaining -----------------------------
-# Read straight from the statusline's .rate_limits.five_hour. If the field is
-# absent we DON'T fake a full bar — we mark MP unknown so a missing budget never
-# reads as "plenty left".
+# From .rate_limits.five_hour. Absent → mark unknown, never fake a full bar.
 five_used="$five_used_in"
 five_reset="$five_reset_in"
 mp_known=1
@@ -154,8 +141,7 @@ if [ -n "$five_reset" ]; then
     mp_reset_str="$(human_duration $(( five_reset - now )))"
 fi
 
-# 💸 segment — weekly (7-day) estimated tokens USED = seven_day.used_percentage
-# × WEEKLY_TOKEN_BUDGET. Guard an absent window (never fake a number) like MP.
+# 💸 weekly tokens used = seven_day.used_percentage × WEEKLY_TOKEN_BUDGET; guard absent window like MP.
 seven_used="$seven_used_in"
 seven_reset="$seven_reset_in"
 week_known=1
@@ -208,8 +194,7 @@ mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
 [ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
-# 💸 is a weekly-usage ESTIMATE (tokens ≈ weekly% × budget), so always mark it
-# approximate with ~; grey it out when the weekly window is absent from the payload.
+# Weekly usage is an estimate → mark with ~; grey when the window is absent.
 cost_color="$GOLD"; cost_prefix="~"
 [ "$week_known" -eq 0 ] && cost_color="$GREY"
 
@@ -218,16 +203,11 @@ hp_icon="❤️ "
 [ "$hp_pct" -lt 15 ] && hp_icon="💔"
 
 # ----- Compose statusline -------------------------------------------------
-# Single-space discipline: segments are divided by a dim │ with exactly one
-# space on each side, so no run of >1 space appears anywhere on the line.
+# Segments divided by a dim │ with one space each side (no run of >1 space).
 SEP=" ${DIM}${GREY}│${RESET} "
 
-# Map the model to a DnD-style class + emoji. Claude tiers get themed classes;
-# the major outside vendors each get their own class; unknown → MERCENARY.
-# Sets two globals: class_icon (party-sheet glyph) and class_short (the name).
-# o-series uses the trailing dash (o3-) so bare "o1"/"o3" can't false-match an id/hash.
-class_icon="🗿"
-class_short="MERCENARY"
+# Map model → DnD class + emoji; unknown → MERCENARY. Sets class_icon, class_short.
+# o-series matched with trailing dash (o3-) so bare "o1"/"o3" can't false-match a hash.
 class_for_model() {
     local hay
     hay="$(printf '%s %s' "$model_id" "$model_name" | tr '[:upper:]' '[:lower:]')"
@@ -249,9 +229,8 @@ class_for_model() {
 }
 class_for_model
 
-# Model version → RPG "level" (e.g. Opus 4.8 → lv.4.8). Search name + id together:
-# dotted major.minor first (4.8), then dash-joined (4-5 → 4.5), else a lone major (5).
-# Ordered so a trailing date suffix (…-20251001) never wins over the real version.
+# Model version → RPG "level" (Opus 4.8 → lv.4.8): dotted 4.8, then dash 4-5→4.5, else major 5.
+# Ordered so a trailing date suffix (…-20251001) can't win over the real version.
 ver_hay="$model_name $model_id"
 model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+\.[0-9]+' | head -n1 || true)"
 if [ -z "$model_level" ]; then
@@ -259,8 +238,7 @@ if [ -z "$model_level" ]; then
 fi
 [ -z "$model_level" ] && model_level="$(printf '%s' "$ver_hay" | grep -oE '[0-9]+' | head -n1 || true)"
 
-# x10 folds the version's decimal into a clean integer level (4.8 → 48, 5 → 50).
-# %.0f rounds — plain %d would floor 4.8*10 to 47. Unknown version → ??.
+# x10 → integer level (4.8→48, 5→50). %.0f rounds; %d would floor 4.8*10 to 47. Unknown → ??.
 if [ -n "$model_level" ]; then
     model_level="$(awk -v v="$model_level" 'BEGIN{printf "%.0f", v*10}')"
 else
