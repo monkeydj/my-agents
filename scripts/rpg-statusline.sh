@@ -8,6 +8,9 @@
 #          consume rate-limit quota (NOT context), and shows a ⟳ regen
 #          countdown to the next reset. If the field is absent MP shows ??% —
 #          a missing budget is never rendered as a full bar.
+# 💸 Coin = weekly (7-day) estimated tokens USED = rate_limits.seven_day
+#          .used_percentage × WEEKLY_TOKEN_BUDGET (config below). "~" = estimate;
+#          "??" (grey) = the weekly window is absent from the payload.
 #
 # Wire it up in settings.json:
 #   "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
@@ -19,6 +22,7 @@ set -euo pipefail
 # ----- Config -------------------------------------------------------------
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000                          # tokens, standard window
+WEEKLY_TOKEN_BUDGET=5000000                         # EDIT: your plan's weekly token allowance
 
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
@@ -52,10 +56,28 @@ input="$(cat)"
 
 jqget() { printf '%s' "$input" | jq -r "$1" 2>/dev/null || true; }
 
+# human_duration <seconds> : "2d4h" (>=1d), "3h12m" (>=1h), "45m" (else). Empty if <=0.
+human_duration() {
+    local s="$1"
+    if [ "$s" -le 0 ] 2>/dev/null; then printf ''; return; fi
+    local d=$(( s / 86400 )) h=$(( (s % 86400) / 3600 )) m=$(( (s % 3600) / 60 ))
+    if   [ "$d" -gt 0 ]; then printf '%dd%dh' "$d" "$h"
+    elif [ "$h" -gt 0 ]; then printf '%dh%dm' "$h" "$m"
+    else printf '%dm' "$m"; fi
+}
+
+# format_tokens <int> : humanize — 1400000→"1.4M", 920000→"920K", 12000→"12K", else raw.
+format_tokens() {
+    awk -v n="$1" 'BEGIN{
+        if (n>=1000000) printf "%.1fM", n/1000000;
+        else if (n>=1000) printf "%.0fK", n/1000;
+        else printf "%d", n;
+    }'
+}
+
 model_name="$(jqget '.model.display_name // .model.id // "Adventurer"')"
 model_id="$(jqget '.model.id // ""')"
 transcript="$(jqget '.transcript_path // ""')"
-cost_usd="$(jqget '.cost.total_cost_usd // 0')"
 lines_added="$(jqget '.cost.total_lines_added // 0')"
 lines_removed="$(jqget '.cost.total_lines_removed // 0')"
 exceeds_200k="$(jqget '.exceeds_200k_tokens // false')"
@@ -67,6 +89,8 @@ ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
 ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
 five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
 five_reset_in="$(jqget '.rate_limits.five_hour.resets_at // empty')"
+seven_used_in="$(jqget '.rate_limits.seven_day.used_percentage // empty')"
+seven_reset_in="$(jqget '.rate_limits.seven_day.resets_at // empty')"
 
 # ----- Context window size (1M models carry "[1m]" in the id) ------------
 ctx_window=$DEFAULT_CTX_WINDOW
@@ -127,19 +151,31 @@ fi
 mp_reset_str=""
 if [ -n "$five_reset" ]; then
     now="$(date +%s)"
-    diff=$(( five_reset - now ))
-    if [ "$diff" -gt 0 ]; then
-        rh=$(( diff / 3600 )); rm=$(( (diff % 3600) / 60 ))
-        if [ "$rh" -gt 0 ]; then mp_reset_str="$(printf '%dh%dm' "$rh" "$rm")"; else mp_reset_str="$(printf '%dm' "$rm")"; fi
-    fi
+    mp_reset_str="$(human_duration $(( five_reset - now )))"
 fi
 
-# Cost for the 💸 segment — ¢ under $1, $X.XX at $1+.
-cost_cents="$(printf '%.0f' "$(echo "${cost_usd:-0} * 100" | bc -l 2>/dev/null || echo 0)" 2>/dev/null || echo 0)"
-if [ "${cost_cents:-0}" -ge 100 ]; then
-    cost_label="$(printf '$%.2f' "${cost_usd:-0}")"
+# 💸 segment — weekly (7-day) estimated tokens USED = seven_day.used_percentage
+# × WEEKLY_TOKEN_BUDGET. Guard an absent window (never fake a number) like MP.
+seven_used="$seven_used_in"
+seven_reset="$seven_reset_in"
+week_known=1
+week_used_label="??"
+if [ -n "$seven_used" ]; then
+    week_used_tokens="$(awk -v p="$seven_used" -v b="$WEEKLY_TOKEN_BUDGET" 'BEGIN{printf "%.0f",(p/100.0)*b}' 2>/dev/null || echo "")"
+    if [ -n "$week_used_tokens" ]; then
+        week_used_label="$(format_tokens "$week_used_tokens")"
+    else
+        week_known=0
+    fi
 else
-    cost_label="${cost_cents}¢"
+    week_known=0
+fi
+
+# Weekly budget reset countdown.
+week_reset_str=""
+if [ -n "$seven_reset" ]; then
+    now="$(date +%s)"
+    week_reset_str="$(human_duration $(( seven_reset - now )))"
 fi
 
 # ----- Bar renderer -------------------------------------------------------
@@ -172,14 +208,10 @@ mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
 [ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
-# 💰 honesty: a present 5h budget means a quota plan, where the dollar figure is
-# notional (API-equivalent), not real spend — mark with ~ and mute it so MP reads as
-# the real currency. No budget field (API pay-go likely) → real spend → keep vivid.
-if [ "$mp_known" -eq 1 ]; then
-    cost_color="$DIMGOLD"; cost_prefix="~"
-else
-    cost_color="$GOLD"; cost_prefix=""
-fi
+# 💸 is a weekly-usage ESTIMATE (tokens ≈ weekly% × budget), so always mark it
+# approximate with ~; grey it out when the weekly window is absent from the payload.
+cost_color="$GOLD"; cost_prefix="~"
+[ "$week_known" -eq 0 ] && cost_color="$GREY"
 
 # Low-HP warning glyph
 hp_icon="❤️ "
@@ -203,7 +235,7 @@ class_for_model() {
         *opus*)                   class_icon="🧙"; class_short="ARCHMAGE"  ;; # deepest reasoning → arcane elder
         *sonnet*)                 class_icon="🪄"; class_short="WIZARD"    ;; # best all-round coder → trained mage
         *haiku*)                  class_icon="🗡️"; class_short="ROGUE"     ;; # fast & cheap → nimble striker
-        *fable*)                  class_icon="🎵"; class_short="BARD"      ;; # creative/storyteller → performer
+        *fable*)                  class_icon="🎸"; class_short="BARD"      ;; # creative/storyteller → performer
         *gpt*|*openai*|*o1-*|*o3-*|*o4-*) class_icon="😈"; class_short="WARLOCK" ;; # power via an outside patron
         *gemini*)                 class_icon="🏹"; class_short="RANGER"    ;; # broad-reach search/tooling → tracker
         *llama*)                  class_icon="🌿"; class_short="DRUID"     ;; # open/wild weights → nature shifter
@@ -212,7 +244,7 @@ class_for_model() {
         *deepseek*)               class_icon="🌀"; class_short="MONK"      ;; # the deep seeker → disciplined ascetic
         *qwen*)                   class_icon="📖"; class_short="CLERIC"    ;; # steady support model → faith healer
         *claude*)                 class_icon="🎲"; class_short="ADVENTURER";; # unrecognized Claude → generic hero
-        *)                        class_icon="🏴‍☠️"; class_short="MERCENARY" ;; # unknown vendor → hired sword
+        *)                        class_icon="🗿"; class_short="MERCENARY" ;; # unknown vendor → hired sword
     esac
 }
 class_for_model
@@ -286,7 +318,8 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💸 %s%s%s' "$cost_color" "$cost_prefix" "$cost_label" "$RESET"
+printf '%s💸 %s%s%s' "$cost_color" "$cost_prefix" "$week_used_label" "$RESET"
+[ "$week_known" -eq 1 ] && [ -n "$week_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$week_reset_str" "$RESET"
 if [ -n "$branch" ]; then
     printf '%s' "$SEP"
     if [ -n "$gs_tokens" ]; then
