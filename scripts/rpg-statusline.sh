@@ -3,7 +3,7 @@
 #
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
-# 💸 Coin = weekly tokens used ≈ .rate_limits.seven_day.used_percentage × WEEKLY_TOKEN_BUDGET; "~" estimate, "??" absent
+# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; ⟳ = 7-day rate-limit reset; "??" when cache absent/unreadable
 #
 # settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
 # Input: JSON object on stdin (statusline contract).
@@ -13,7 +13,6 @@ set -euo pipefail
 # ----- Config -------------------------------------------------------------
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
-WEEKLY_TOKEN_BUDGET=5000000  # EDIT: your plan's weekly token allowance
 
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
@@ -79,7 +78,6 @@ ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
 ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
 five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
 five_reset_in="$(jqget '.rate_limits.five_hour.resets_at // empty')"
-seven_used_in="$(jqget '.rate_limits.seven_day.used_percentage // empty')"
 seven_reset_in="$(jqget '.rate_limits.seven_day.resets_at // empty')"
 
 # ----- Context window size (1M models carry "[1m]" in the id) ------------
@@ -141,27 +139,30 @@ if [ -n "$five_reset" ]; then
     mp_reset_str="$(human_duration $(( five_reset - now )))"
 fi
 
-# 💸 weekly tokens used = seven_day.used_percentage × WEEKLY_TOKEN_BUDGET; guard absent window like MP.
-seven_used="$seven_used_in"
-seven_reset="$seven_reset_in"
-week_known=1
+# 💸 real tokens used in the last 7 days, summed from the stats cache (dailyModelTokens).
+# Absent / unreadable / racing a cache write → ?? (never a fabricated number).
+week_known=0
 week_used_label="??"
-if [ -n "$seven_used" ]; then
-    week_used_tokens="$(awk -v p="$seven_used" -v b="$WEEKLY_TOKEN_BUDGET" 'BEGIN{printf "%.0f",(p/100.0)*b}' 2>/dev/null || echo "")"
-    if [ -n "$week_used_tokens" ]; then
-        week_used_label="$(format_tokens "$week_used_tokens")"
-    else
-        week_known=0
-    fi
-else
-    week_known=0
+stats_file="$(dirname "${BASH_SOURCE[0]}")/stats-cache.json"
+if [ -f "$stats_file" ]; then
+    week_tokens="$(jq -r '
+        (now - 6*86400 | gmtime | strftime("%Y-%m-%d")) as $cut
+        | [ .dailyModelTokens[]?
+            | select(.date >= $cut)
+            | .tokensByModel // {} | to_entries[] | .value ]
+        | add // 0
+    ' "$stats_file" 2>/dev/null || echo "")"
+    case "$week_tokens" in
+        ''|*[!0-9]*) : ;;
+        *) week_used_label="$(format_tokens "$week_tokens")"; week_known=1 ;;
+    esac
 fi
 
-# Weekly budget reset countdown.
+# Weekly rate-limit reset countdown (independent of the token source above).
 week_reset_str=""
-if [ -n "$seven_reset" ]; then
+if [ -n "$seven_reset_in" ]; then
     now="$(date +%s)"
-    week_reset_str="$(human_duration $(( seven_reset - now )))"
+    week_reset_str="$(human_duration $(( seven_reset_in - now )))"
 fi
 
 # ----- Bar renderer -------------------------------------------------------
@@ -194,8 +195,8 @@ mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
 [ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
-# Weekly usage is an estimate → mark with ~; grey when the window is absent.
-cost_color="$GOLD"; cost_prefix="~"
+# Weekly usage is real measured tokens → gold; grey ?? when the cache is unavailable.
+cost_color="$GOLD"
 [ "$week_known" -eq 0 ] && cost_color="$GREY"
 
 # Low-HP warning glyph
@@ -296,8 +297,9 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💸 %s%s%s' "$cost_color" "$cost_prefix" "$week_used_label" "$RESET"
-[ "$week_known" -eq 1 ] && [ -n "$week_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$week_reset_str" "$RESET"
+printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
+[ "$week_known" -eq 1 ] && printf ' 🪙'
+[ -n "$week_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$week_reset_str" "$RESET"
 if [ -n "$branch" ]; then
     printf '%s' "$SEP"
     if [ -n "$gs_tokens" ]; then
