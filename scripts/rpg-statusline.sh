@@ -4,6 +4,7 @@
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
 # 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; ⟳ = 7-day rate-limit reset; "??" when cache absent/unreadable
+# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level (low→max); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 #
 # settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
 # Input: JSON object on stdin (statusline contract).
@@ -319,9 +320,39 @@ py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
+# ----- Effort buff: RPG power-up aura from the reasoning-effort tier -------
+# Source order (never fabricated): explicit tier in the statusline JSON, else
+# bucket $MAX_THINKING_TOKENS into tiers. Neither present → no buff rendered.
+effort_tier="$(jqget '.reasoning_effort // .effort // empty' | tr '[:upper:]' '[:lower:]')"
+if [ -z "$effort_tier" ]; then
+    mtt="${MAX_THINKING_TOKENS:-}"
+    case "$mtt" in
+        ''|*[!0-9]*) : ;;
+        *)
+            if   [ "$mtt" -le 0 ];     then effort_tier=""
+            elif [ "$mtt" -le 4000 ];  then effort_tier="low"
+            elif [ "$mtt" -le 10000 ]; then effort_tier="medium"
+            elif [ "$mtt" -le 24000 ]; then effort_tier="high"
+            elif [ "$mtt" -le 32000 ]; then effort_tier="xhigh"
+            else effort_tier="max"; fi
+            ;;
+    esac
+fi
+
+# Ascending heat gradient: candle ember → molten volcano.
+effort_buff=""
+case "$effort_tier" in
+    low)    effort_buff="$(printf '%s🕯️ LOW%s'  "$DIMGOLD" "$RESET")" ;;
+    medium) effort_buff="$(printf '%s🔥 MED%s'  "$YELLOW"  "$RESET")" ;;
+    high)   effort_buff="$(printf '%s☄️ HIGH%s' "$ORANGE"  "$RESET")" ;;
+    xhigh)  effort_buff="$(printf '%s💥 XHI%s'  "$RED"     "$RESET")" ;;
+    max)    effort_buff="$(printf '%s🌋 MAX%s'  "$GOLD"    "$RESET")" ;;
+esac
+
 segs=()
-segs+=("$(printf '%s%s %s%s%s %slv.%s%s' \
-    "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET")")
+segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
+    "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET" \
+    "${effort_buff:+ $effort_buff}")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
