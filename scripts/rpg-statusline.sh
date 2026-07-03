@@ -322,8 +322,10 @@ command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | 
 
 # ----- Effort buff: RPG power-up aura from the reasoning-effort tier -------
 # Source order (never fabricated): explicit tier in the statusline JSON, else
-# bucket $MAX_THINKING_TOKENS into tiers. Neither present → no buff rendered.
+# $CLAUDE_EFFORT (set from settings.json effortLevel), else bucket
+# $MAX_THINKING_TOKENS into tiers. None present → no buff rendered.
 effort_tier="$(jqget '.reasoning_effort // .effort // empty' | tr '[:upper:]' '[:lower:]')"
+[ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
     mtt="${MAX_THINKING_TOKENS:-}"
     case "$mtt" in
