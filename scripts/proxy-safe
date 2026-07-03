@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+set -m  # background job gets its own pgid, so we can kill cloud-sql-proxy + descendants together
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IDLE_MINUTES=60
+POLL_SECONDS=30
+
+usage() {
+  echo "Usage: $(basename "$0") <stg|pre|prod>" >&2
+  exit 1
+}
+
+[[ $# -eq 1 ]] || usage
+case "$1" in
+  stg|pre|prod) ENV="$1" ;;
+  *) usage ;;
+esac
+
+TARGET_SCRIPT="$SCRIPT_DIR/proxy-$ENV"
+[[ -x "$TARGET_SCRIPT" ]] || { echo "❌ $TARGET_SCRIPT not found or not executable" >&2; exit 1; }
+
+PORTS=($(grep -v '^[[:space:]]*#' "$TARGET_SCRIPT" | grep -oE 'port=[0-9]+' | cut -d= -f2 | sort -un || true))
+[[ ${#PORTS[@]} -gt 0 ]] || { echo "❌ No ports found in $TARGET_SCRIPT" >&2; exit 1; }
+
+echo "Starting cloud-sql-proxy ($ENV) — auto-kill after ${IDLE_MINUTES}m with no active DB connection on ports: ${PORTS[*]}"
+
+"$TARGET_SCRIPT" &
+PROXY_PID=$!
+
+cleanup() {
+  trap - EXIT INT TERM
+  if kill -0 "$PROXY_PID" 2>/dev/null; then
+    kill -TERM -- -"$PROXY_PID" 2>/dev/null || true
+    wait "$PROXY_PID" 2>/dev/null || true
+  fi
+  if [[ -n "${MONITOR_PID:-}" ]] && kill -0 "$MONITOR_PID" 2>/dev/null; then
+    kill "$MONITOR_PID" 2>/dev/null || true
+  fi
+  exit 0
+}
+trap cleanup EXIT INT TERM
+
+# Idle monitor: polls for ESTABLISHED connections on the proxy's ports;
+# kills the whole process group if none seen for IDLE_MINUTES straight.
+(
+  last_active=$(date +%s)
+  idle_limit=$(( IDLE_MINUTES * 60 ))
+  while kill -0 "$PROXY_PID" 2>/dev/null; do
+    sleep "$POLL_SECONDS"
+    active=0
+    for p in "${PORTS[@]}"; do
+      if lsof -nP -iTCP:"$p" -sTCP:ESTABLISHED >/dev/null 2>&1; then
+        active=1
+        break
+      fi
+    done
+    now=$(date +%s)
+    if [[ $active -eq 1 ]]; then
+      last_active=$now
+    elif (( now - last_active >= idle_limit )); then
+      echo "Idle ${IDLE_MINUTES}m on all ports — killing cloud-sql-proxy ($ENV, pid $PROXY_PID)"
+      kill -TERM -- -"$PROXY_PID" 2>/dev/null || true
+      exit 0
+    fi
+  done
+) &
+MONITOR_PID=$!
+
+wait "$PROXY_PID"
