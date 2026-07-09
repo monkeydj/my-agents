@@ -4,3 +4,4 @@ brew install worktrunk && wt config shell install
 brew install anomalyco/tap/opencode
 brew install tlrc
 curl https://mise.run | sh
+brew install glab
