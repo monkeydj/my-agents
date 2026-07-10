@@ -11,3 +11,9 @@ brew install fzf
 curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
 tar -xf google-cloud-cli-darwin-arm.tar.gz
 ./google-cloud-sdk/install.sh
+# see Releases for other versions
+URL="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.23.0"
+
+curl "$URL/cloud-sql-proxy.linux.amd64" -o cloud-sql-proxy
+
+chmod +x cloud-sql-proxy
