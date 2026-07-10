@@ -7,3 +7,4 @@ brew install tlrc
 curl https://mise.run | sh
 brew install glab
 brew install zoxide
+brew install fzf
