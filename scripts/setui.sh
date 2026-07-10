@@ -8,3 +8,6 @@ curl https://mise.run | sh
 brew install glab
 brew install zoxide
 brew install fzf
+curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
+tar -xf google-cloud-cli-darwin-arm.tar.gz
+./google-cloud-sdk/install.sh
