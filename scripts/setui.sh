@@ -1,19 +1,31 @@
+# === Bootstrap: package manager ===
+# Homebrew is interactive (Enter + sudo prompt) but must run first —
+# every brew install below depends on it.
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-curl -LsSf https://astral.sh/uv/install.sh | sh
-curl -fsSL https://claude.ai/install.sh | bash
-brew install worktrunk && wt config shell install
-brew install anomalyco/tap/opencode
-brew install tlrc
+
+# === Runtime & toolchain managers ===
 curl https://mise.run | sh
-brew install glab
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# === Shell productivity ===
 brew install zoxide
 brew install fzf
+
+# === Dev workflow tools ===
+brew install glab
+brew install worktrunk && wt config shell install
+brew install tlrc
+
+# === AI agents ===
+curl -fsSL https://claude.ai/install.sh | bash
+brew install anomalyco/tap/opencode
+
+# === Cloud tooling (GCP) ===
 curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
 tar -xf google-cloud-cli-darwin-arm.tar.gz
 ./google-cloud-sdk/install.sh
 # see Releases for other versions
 URL="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.23.0"
-
+# TODO(debt): linux.amd64 binary on darwin-arm machine — won't exec; needs darwin.arm64
 curl "$URL/cloud-sql-proxy.linux.amd64" -o cloud-sql-proxy
-
 chmod +x cloud-sql-proxy
