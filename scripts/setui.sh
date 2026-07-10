@@ -6,3 +6,4 @@ brew install anomalyco/tap/opencode
 brew install tlrc
 curl https://mise.run | sh
 brew install glab
+brew install zoxide
