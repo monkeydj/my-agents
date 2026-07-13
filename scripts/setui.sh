@@ -15,6 +15,7 @@ brew install fzf
 brew install glab
 brew install worktrunk
 brew install tlrc
+curl -sSL https://install.secretspec.dev | sh
 
 # === AI agents ===
 curl -fsSL https://claude.ai/install.sh | bash
