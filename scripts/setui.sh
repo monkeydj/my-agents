@@ -20,6 +20,7 @@ curl -sSL https://install.secretspec.dev | sh
 # === AI agents ===
 curl -fsSL https://claude.ai/install.sh | bash
 brew install anomalyco/tap/opencode
+brew install --cask codex
 
 # === Cloud tooling (GCP) — non-interactive downloads ===
 # SDK lives in ~/.local/google-cloud-sdk; CLIs exposed via ~/.local/bin
