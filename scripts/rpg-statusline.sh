@@ -35,7 +35,8 @@ GREY="${ESC}[38;5;245m"
 # ----- Muted palette (line 2 world/context, recedes behind vitals) --------
 M_SLATE="${ESC}[38;5;67m"     # path / location
 M_SAGE="${ESC}[38;5;108m"     # branch, staged, clean
-M_TAN="${ESC}[38;5;179m"      # python, unstaged
+M_TAN="${ESC}[38;5;179m"      # unstaged
+M_PYTHON="${ESC}[38;5;74m"    # python (official blue)
 M_TEAL="${ESC}[38;5;73m"      # ahead
 M_LAVENDER="${ESC}[38;5;103m" # behind
 M_MOSS="${ESC}[38;5;72m"      # node
@@ -324,6 +325,13 @@ py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
+# Official Seti Python logo glyph (U+E606, needs a Nerd Font); 🐍 via STATUSLINE_NF=0.
+if [ "${STATUSLINE_NF:-1}" = "1" ]; then
+    PY_ICON=$'\xEE\x98\x86'   # U+E606 Seti python (UTF-8; bash 3.2-safe)
+else
+    PY_ICON="🐍"
+fi
+
 # ----- Effort buff: RPG power-up aura from the reasoning-effort tier -------
 # Source order (never fabricated): explicit tier in the statusline JSON, else
 # $CLAUDE_EFFORT, else effortLevel in settings.json colocated with this script
@@ -383,7 +391,7 @@ if [ -n "$branch" ]; then
     [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
     segs+=("$(printf '%s🌿 %s%s' "$branch_color" "$branch" "$RESET")")
 fi
-[ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$M_TAN" "$py" "$RESET")")
+[ -n "$py" ]     && segs+=("$(printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET")")
 [ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET")")
 
 line2=""
