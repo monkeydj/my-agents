@@ -352,15 +352,26 @@ if [ -z "$effort_tier" ]; then
     esac
 fi
 
-# Ascending heat gradient: candle ember → molten volcano.
+# Ascending heat gradient: candle ember → molten volcano. Rendered as a
+# numeric tier (E1–E5) plus a 5-cell heat bar; hidden when no tier resolves.
 effort_buff=""
+effort_n=0
+effort_icon=""
+effort_color=""
 case "$effort_tier" in
-    low)    effort_buff="$(printf '%s🕯️ LOW%s'  "$DIMGOLD" "$RESET")" ;;
-    medium) effort_buff="$(printf '%s🔥 MED%s'  "$YELLOW"  "$RESET")" ;;
-    high)   effort_buff="$(printf '%s☄️ HIGH%s' "$ORANGE"  "$RESET")" ;;
-    xhigh)  effort_buff="$(printf '%s💥 XHI%s'  "$RED"     "$RESET")" ;;
-    max)    effort_buff="$(printf '%s🌋 MAX%s'  "$GOLD"    "$RESET")" ;;
+    low)    effort_n=1; effort_icon="🕯️"; effort_color="$DIMGOLD" ;;
+    medium) effort_n=2; effort_icon="🔥"; effort_color="$YELLOW" ;;
+    high)   effort_n=3; effort_icon="☄️"; effort_color="$ORANGE" ;;
+    xhigh)  effort_n=4; effort_icon="💥"; effort_color="$RED" ;;
+    max)    effort_n=5; effort_icon="🌋"; effort_color="$GOLD" ;;
 esac
+if [ "$effort_n" -gt 0 ]; then
+    ebar=""
+    for (( i=1; i<=5; i++ )); do
+        if [ "$i" -le "$effort_n" ]; then ebar+="${effort_color}▮"; else ebar+="${DIM}▯"; fi
+    done
+    effort_buff="$(printf '%s%s%sE%d%s %s%s' "$effort_color" "$effort_icon" "$BOLD" "$effort_n" "$RESET" "$ebar" "$RESET")"
+fi
 
 segs=()
 segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
