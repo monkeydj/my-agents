@@ -4,7 +4,8 @@
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
 # 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; ⟳ = 7-day rate-limit reset; "??" when cache absent/unreadable
-# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level (low→max); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
 # settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
 # Input: JSON object on stdin (statusline contract).
@@ -43,6 +44,9 @@ M_RUST="${ESC}[38;5;173m"    # dirty branch
 
 # ----- Read stdin ---------------------------------------------------------
 input="$(cat)"
+
+# JSONL capture for monitoring; never allowed to break the statusline.
+printf '%s\n' "$input" >> /tmp/statusline.log 2>/dev/null || true
 
 jqget() { printf '%s' "$input" | jq -r "$1" 2>/dev/null || true; }
 
