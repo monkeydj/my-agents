@@ -337,7 +337,7 @@ fi
 # $CLAUDE_EFFORT, else effortLevel in settings.json colocated with this script
 # (no env-passthrough dependency), else bucket $MAX_THINKING_TOKENS into tiers.
 # None present → no buff rendered.
-effort_tier="$(jqget '.reasoning_effort // .effort // empty' | tr '[:upper:]' '[:lower:]')"
+effort_tier="$(jqget '.reasoning_effort // (if (.effort|type)=="object" then .effort.level else .effort end) // empty' | tr '[:upper:]' '[:lower:]')"
 [ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
     settings_file="$(dirname "${BASH_SOURCE[0]}")/settings.json"
