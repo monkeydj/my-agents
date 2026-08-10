@@ -3,7 +3,7 @@
 #
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
-# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; ⟳ = 7-day rate-limit reset; "??" when cache absent/unreadable
+# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; 󰑐 = 7-day rate-limit reset; "??" when cache absent/unreadable
 # 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
@@ -296,7 +296,7 @@ if [ "$mp_known" -eq 1 ]; then
     printf '%s🔮 %sMP%s %s %s%d%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
         "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
-    [ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
+    [ -n "$mp_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$mp_reset_str" "$RESET"
 else
     printf '%s🔮 %sMP%s %s %s??%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
@@ -305,7 +305,7 @@ fi
 printf '%s' "$SEP"
 printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
 [ "$week_known" -eq 1 ] && printf ' 🪙'
-[ -n "$week_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$week_reset_str" "$RESET"
+[ -n "$week_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$week_reset_str" "$RESET"
 if [ -n "$branch" ]; then
     printf '%s' "$SEP"
     if [ -n "$gs_tokens" ]; then
