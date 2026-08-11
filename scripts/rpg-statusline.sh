@@ -54,7 +54,7 @@ jqget() { printf '%s' "$input" | jq -r "$1" 2>/dev/null || true; }
 # human_duration <seconds> → "2d4h" / "3h12m" / "45m"; empty if <=0
 human_duration() {
     local s="$1"
-    if [ "$s" -le 0 ] 2>/dev/null; then printf ''; return; fi
+    if [ "$s" -le 0 ] 2>/dev/null; then printf 'stale'; return; fi
     local d=$(( s / 86400 )) h=$(( (s % 86400) / 3600 )) m=$(( (s % 3600) / 60 ))
     if   [ "$d" -gt 0 ]; then printf '%dd%dh' "$d" "$h"
     elif [ "$h" -gt 0 ]; then printf '%dh%dm' "$h" "$m"
@@ -156,10 +156,10 @@ if [ -f "$stats_file" ]; then
         | [ .dailyModelTokens[]?
             | select(.date >= $cut)
             | .tokensByModel // {} | to_entries[] | .value ]
-        | add // 0
+        | if length == 0 then "empty" else add // 0 end
     ' "$stats_file" 2>/dev/null || echo "")"
     case "$week_tokens" in
-        ''|*[!0-9]*) : ;;
+        ''|empty|*[!0-9]*) : ;;
         *) week_used_label="$(format_tokens "$week_tokens")"; week_known=1 ;;
     esac
 fi
