@@ -16,6 +16,7 @@ brew install glab
 brew install worktrunk
 brew install tlrc
 brew install httpie
+brew install witr television
 curl -sSL https://install.secretspec.dev | sh
 
 # === AI agents ===
