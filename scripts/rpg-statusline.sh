@@ -307,17 +307,9 @@ fi
 printf '%s' "$SEP"
 printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
 [ -n "$week_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$week_reset_str" "$RESET"
-if [ -n "$branch" ]; then
-    printf '%s' "$SEP"
-    if [ -n "$gs_tokens" ]; then
-        printf '%s' "$gs_tokens"
-    else
-        printf '%s✓%s' "$M_SAGE" "$RESET"
-    fi
-fi
 printf '\n'
 
-# ----- Line 2: context — class → dir → branch → runtimes -----------------
+# ----- Line 2: context — class → dir → git-tokens → branch -----------------
 dir_icon="🏰"
 [ "$is_worktree" -eq 1 ] && dir_icon="🛖"
 
@@ -386,6 +378,11 @@ segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
     "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET" \
     "${effort_buff:+ $effort_buff}")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
+if [ -n "$gs_tokens" ]; then
+    segs+=("$(printf '%s%s%s%s' "$M_SAGE" "$gs_tokens" "$RESET")")
+elif [ -n "$branch" ]; then
+    segs+=("$(printf '%s✓%s' "$M_SAGE" "$RESET")")
+fi
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
     [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
