@@ -207,7 +207,7 @@ cost_color="$GOLD"
 
 # Low-HP warning glyph
 hp_icon="❤️ "
-[ "$hp_pct" -lt 15 ] && hp_icon="💔"
+[ "$hp_pct" -lt 42 ] && hp_icon="💔"
 
 # ----- Compose statusline -------------------------------------------------
 # Segments divided by a dim │ with one space each side (no run of >1 space).
