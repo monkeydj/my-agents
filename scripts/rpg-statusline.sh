@@ -92,6 +92,7 @@ ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
 ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
 five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
 five_reset_in="$(jqget '.rate_limits.five_hour.resets_at // empty')"
+seven_used_in="$(jqget '.rate_limits.seven_day.used_percentage // empty')"
 seven_reset_in="$(jqget '.rate_limits.seven_day.resets_at // empty')"
 
 # ----- Context window size (1M models carry "[1m]" in the id) ------------
@@ -154,8 +155,11 @@ if [ -n "$five_reset" ]; then
 fi
 
 # 💸 real tokens used in the last 7 days, summed from the stats cache (dailyModelTokens).
-# Absent / unreadable / racing a cache write → ?? (never a fabricated number).
+# Falls back to the live 7-day rate-limit used-percentage from the statusline contract
+# when the cache is stale/absent (Claude Code's stats recompute has known freeze bugs).
+# Never a fabricated number — always one of: real count, live %, or ??.
 week_known=0
+week_rate_limited=0
 week_used_label="??"
 stats_file="$CLAUDE_DIR/stats-cache.json"
 if [ -f "$stats_file" ]; then
@@ -170,6 +174,15 @@ if [ -f "$stats_file" ]; then
         ''|empty|*[!0-9]*) : ;;
         *) week_used_label="$(format_tokens "$week_tokens")"; week_known=1 ;;
     esac
+fi
+# Fallback: live rate-limit percentage from the statusline contract.
+if [ "$week_known" -eq 0 ] && [ -n "$seven_used_in" ]; then
+    week_used_pct="$(printf '%.0f' "$seven_used_in" 2>/dev/null || echo "")"
+    if [ -n "$week_used_pct" ]; then
+        week_used_label="ⓢ${week_used_pct}%"
+        week_known=1
+        week_rate_limited=1
+    fi
 fi
 
 # Weekly rate-limit reset countdown (independent of the token source above).
@@ -325,7 +338,11 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
+if [ "$week_rate_limited" -eq 1 ]; then
+    printf '%s💸 %s%s %s(rate-limit%%)%s' "$DIM" "$week_used_label" "$RESET" "$DIM" "$RESET"
+else
+    printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
+fi
 [ -n "$week_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$week_reset_str" "$RESET"
 [ -n "$py" ]   && printf '%s%s' "$SEP" && printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"
 [ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET"
