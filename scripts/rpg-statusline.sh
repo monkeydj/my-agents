@@ -287,7 +287,9 @@ if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tr
     [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$M_LAVENDER" "$behind" "$RESET")"
 fi
 
-# ----- Line 1: vitals — HP → MP → cost → git-status → lines-changed ------
+# ----- Line 1: vitals — lines-changed → HP → MP → cost → git-status --------
+printf '%s⚔️ +%s%s%s/%s-%s%s' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+printf '%s' "$SEP"
 printf '%s%s%s%sHP%s %s %s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
@@ -313,8 +315,7 @@ if [ -n "$branch" ]; then
         printf '%s✓%s' "$M_SAGE" "$RESET"
     fi
 fi
-printf '%s' "$SEP"
-printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+printf '\n'
 
 # ----- Line 2: context — class → dir → branch → runtimes -----------------
 dir_icon="🏰"
