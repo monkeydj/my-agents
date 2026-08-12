@@ -42,8 +42,7 @@
 # No `-e`: a Stop hook that aborts mid-way is worse than one that quietly skips.
 set -uo pipefail
 
-HTTP_MODEL="${HTTP_MODEL:-claude-haiku-4-5}"
-CLI_MODEL="${CLI_MODEL:-claude-haiku-4-5-20251001}"
+TITLE_MODEL="${TITLE_MODEL:-claude-haiku-4-5}"
 MAX_WORDS="${MAX_WORDS:-4}"
 
 # Only the nested-CLI path can recurse (that child fires its own Stop hook). The
@@ -119,7 +118,7 @@ title_via_http() {
 
     local body
     body=$(jq -n \
-        --arg model "$HTTP_MODEL" \
+        --arg model "$TITLE_MODEL" \
         --arg system "$SYSTEM_PROMPT" \
         --arg prompt "$GEN_PROMPT" \
         '{model: $model, max_tokens: 64, system: $system,
@@ -143,7 +142,7 @@ title_via_cli() {
 
     cd "${TMPDIR:-/tmp}" || return 1
     CLAUDE_TITLE_HOOK=1 claude -p "$GEN_PROMPT" \
-        --model "$CLI_MODEL" \
+        --model "$TITLE_MODEL" \
         --output-format text \
         --no-session-persistence \
         --strict-mcp-config \
