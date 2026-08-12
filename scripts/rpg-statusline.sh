@@ -16,6 +16,14 @@ set -euo pipefail
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
 
+# ----- Resolve Claude config directory (once) -------------------------------
+# Expects <claude-dir>/scripts/rpg-statusline.sh so the grandparent is the
+# claude root (e.g. ~/.claude or a custom profile dir). Falls back to ~/.claude
+# if the script path is ambiguous, so it stays robust under any profile layout.
+CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
+[ -z "$CLAUDE_DIR" ] && CLAUDE_DIR="$HOME/.claude"
+[ -f "$CLAUDE_DIR/stats-cache.json" ] || [ -f "$CLAUDE_DIR/settings.json" ] || CLAUDE_DIR="$HOME/.claude"
+
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
 RESET="${ESC}[0m"
@@ -149,7 +157,7 @@ fi
 # Absent / unreadable / racing a cache write → ?? (never a fabricated number).
 week_known=0
 week_used_label="??"
-stats_file="$(dirname "${BASH_SOURCE[0]}")/../stats-cache.json"
+stats_file="$CLAUDE_DIR/stats-cache.json"
 if [ -f "$stats_file" ]; then
     week_tokens="$(jq -r '
         (now - 6*86400 | gmtime | strftime("%Y-%m-%d")) as $cut
@@ -335,7 +343,7 @@ dir_icon="🏰"
 effort_tier="$(jqget '.reasoning_effort // (if (.effort|type)=="object" then .effort.level else .effort end) // empty' | tr '[:upper:]' '[:lower:]')"
 [ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
-        settings_file="$(dirname "${BASH_SOURCE[0]}")/../settings.json"
+        settings_file="$CLAUDE_DIR/settings.json"
     if [ -f "$settings_file" ]; then
         effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
     fi
