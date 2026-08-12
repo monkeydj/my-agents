@@ -3,10 +3,11 @@
 #
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
-# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 🪙 = token unit; ⟳ = 7-day rate-limit reset; "??" when cache absent/unreadable
-# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level (low→max); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 󰑐 = 7-day rate-limit reset; "??" when cache absent/unreadable
+# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
-# settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
+# settings.json: "statusLine": { "type": "command", "command": "~/.claude/scripts/rpg-statusline.sh" }
 # Input: JSON object on stdin (statusline contract).
 
 set -euo pipefail
@@ -14,6 +15,14 @@ set -euo pipefail
 # ----- Config -------------------------------------------------------------
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
+
+# ----- Resolve Claude config directory (once) -------------------------------
+# Expects <claude-dir>/scripts/rpg-statusline.sh so the grandparent is the
+# claude root (e.g. ~/.claude or a custom profile dir). Falls back to ~/.claude
+# if the script path is ambiguous, so it stays robust under any profile layout.
+CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
+[ -z "$CLAUDE_DIR" ] && CLAUDE_DIR="$HOME/.claude"
+[ -f "$CLAUDE_DIR/stats-cache.json" ] || [ -f "$CLAUDE_DIR/settings.json" ] || CLAUDE_DIR="$HOME/.claude"
 
 # ----- ANSI palette -------------------------------------------------------
 ESC=$'\033'
@@ -34,7 +43,8 @@ GREY="${ESC}[38;5;245m"
 # ----- Muted palette (line 2 world/context, recedes behind vitals) --------
 M_SLATE="${ESC}[38;5;67m"     # path / location
 M_SAGE="${ESC}[38;5;108m"     # branch, staged, clean
-M_TAN="${ESC}[38;5;179m"      # python, unstaged
+M_TAN="${ESC}[38;5;179m"      # unstaged
+M_PYTHON="${ESC}[38;5;74m"    # python (official blue)
 M_TEAL="${ESC}[38;5;73m"      # ahead
 M_LAVENDER="${ESC}[38;5;103m" # behind
 M_MOSS="${ESC}[38;5;72m"      # node
@@ -44,12 +54,15 @@ M_RUST="${ESC}[38;5;173m"    # dirty branch
 # ----- Read stdin ---------------------------------------------------------
 input="$(cat)"
 
+# JSONL capture for monitoring; never allowed to break the statusline.
+printf '%s\n' "$input" >> /tmp/statusline.log 2>/dev/null || true
+
 jqget() { printf '%s' "$input" | jq -r "$1" 2>/dev/null || true; }
 
 # human_duration <seconds> → "2d4h" / "3h12m" / "45m"; empty if <=0
 human_duration() {
     local s="$1"
-    if [ "$s" -le 0 ] 2>/dev/null; then printf ''; return; fi
+    if [ "$s" -le 0 ] 2>/dev/null; then printf 'stale'; return; fi
     local d=$(( s / 86400 )) h=$(( (s % 86400) / 3600 )) m=$(( (s % 3600) / 60 ))
     if   [ "$d" -gt 0 ]; then printf '%dd%dh' "$d" "$h"
     elif [ "$h" -gt 0 ]; then printf '%dh%dm' "$h" "$m"
@@ -79,6 +92,7 @@ ctx_pct_in="$(jqget '.context_window.used_percentage // empty')"
 ctx_size_in="$(jqget '.context_window.context_window_size // .context_window.total_tokens // empty')"
 five_used_in="$(jqget '.rate_limits.five_hour.used_percentage // empty')"
 five_reset_in="$(jqget '.rate_limits.five_hour.resets_at // empty')"
+seven_used_in="$(jqget '.rate_limits.seven_day.used_percentage // empty')"
 seven_reset_in="$(jqget '.rate_limits.seven_day.resets_at // empty')"
 
 # ----- Context window size (1M models carry "[1m]" in the id) ------------
@@ -141,22 +155,34 @@ if [ -n "$five_reset" ]; then
 fi
 
 # 💸 real tokens used in the last 7 days, summed from the stats cache (dailyModelTokens).
-# Absent / unreadable / racing a cache write → ?? (never a fabricated number).
+# Falls back to the live 7-day rate-limit used-percentage from the statusline contract
+# when the cache is stale/absent (Claude Code's stats recompute has known freeze bugs).
+# Never a fabricated number — always one of: real count, live %, or ??.
 week_known=0
+week_rate_limited=0
 week_used_label="??"
-stats_file="$(dirname "${BASH_SOURCE[0]}")/stats-cache.json"
+stats_file="$CLAUDE_DIR/stats-cache.json"
 if [ -f "$stats_file" ]; then
     week_tokens="$(jq -r '
         (now - 6*86400 | gmtime | strftime("%Y-%m-%d")) as $cut
         | [ .dailyModelTokens[]?
             | select(.date >= $cut)
             | .tokensByModel // {} | to_entries[] | .value ]
-        | add // 0
+        | if length == 0 then "empty" else add // 0 end
     ' "$stats_file" 2>/dev/null || echo "")"
     case "$week_tokens" in
-        ''|*[!0-9]*) : ;;
+        ''|empty|*[!0-9]*) : ;;
         *) week_used_label="$(format_tokens "$week_tokens")"; week_known=1 ;;
     esac
+fi
+# Fallback: live rate-limit percentage from the statusline contract.
+if [ "$week_known" -eq 0 ] && [ -n "$seven_used_in" ]; then
+    week_used_pct="$(printf '%.0f' "$seven_used_in" 2>/dev/null || echo "")"
+    if [ -n "$week_used_pct" ]; then
+        week_used_label="ⓢ${week_used_pct}%"
+        week_known=1
+        week_rate_limited=1
+    fi
 fi
 
 # Weekly rate-limit reset countdown (independent of the token source above).
@@ -202,7 +228,7 @@ cost_color="$GOLD"
 
 # Low-HP warning glyph
 hp_icon="❤️ "
-[ "$hp_pct" -lt 15 ] && hp_icon="💔"
+[ "$hp_pct" -lt 42 ] && hp_icon="💔"
 
 # ----- Compose statusline -------------------------------------------------
 # Segments divided by a dim │ with one space each side (no run of >1 space).
@@ -282,7 +308,21 @@ if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tr
     [ "$behind" -gt 0 ]    && add_tok "$(printf '%s↓%s%s' "$M_LAVENDER" "$behind" "$RESET")"
 fi
 
-# ----- Line 1: vitals — HP → MP → cost → git-status → lines-changed ------
+# Language runtimes for line 1 tail (detected early; blank if absent).
+py="" ; node=""
+command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
+command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
+
+# Official Seti Python logo glyph (U+E606, needs a Nerd Font); 🐍 via STATUSLINE_NF=0.
+if [ "${STATUSLINE_NF:-1}" = "1" ]; then
+    PY_ICON=$'\xEE\x98\x86'   # U+E606 Seti python (UTF-8; bash 3.2-safe)
+else
+    PY_ICON="🐍"
+fi
+
+# ----- Line 1: vitals — lines-changed → HP → MP → cost → langs ---------
+printf '%s⚔️ +%s%s%s/%s-%s%s' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+printf '%s' "$SEP"
 printf '%s%s%s%sHP%s %s %s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
     "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
@@ -291,44 +331,36 @@ if [ "$mp_known" -eq 1 ]; then
     printf '%s🔮 %sMP%s %s %s%d%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
         "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
-    [ -n "$mp_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$mp_reset_str" "$RESET"
+    [ -n "$mp_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$mp_reset_str" "$RESET"
 else
     printf '%s🔮 %sMP%s %s %s??%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
-[ "$week_known" -eq 1 ] && printf ' 🪙'
-[ -n "$week_reset_str" ] && printf ' %s⟳%s%s' "$DIM" "$week_reset_str" "$RESET"
-if [ -n "$branch" ]; then
-    printf '%s' "$SEP"
-    if [ -n "$gs_tokens" ]; then
-        printf '%s' "$gs_tokens"
-    else
-        printf '%s✓%s' "$M_SAGE" "$RESET"
-    fi
+if [ "$week_rate_limited" -eq 1 ]; then
+    printf '%s💸 %s%s' "$DIM" "$week_used_label" "$RESET"
+else
+    printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
 fi
-printf '%s' "$SEP"
-printf '%s⚔️ +%s%s%s/%s-%s%s\n' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
+[ -n "$week_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$week_reset_str" "$RESET"
+[ -n "$py" ]   && printf '%s%s' "$SEP" && printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"
+[ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET"
+printf '\n'
 
-# ----- Line 2: context — class → dir → branch → runtimes -----------------
+# ----- Line 2: context — class → dir → git-tokens → branch -----------------
 dir_icon="🏰"
 [ "$is_worktree" -eq 1 ] && dir_icon="🛖"
-
-py="" ; node=""
-command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
-command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
 # ----- Effort buff: RPG power-up aura from the reasoning-effort tier -------
 # Source order (never fabricated): explicit tier in the statusline JSON, else
 # $CLAUDE_EFFORT, else effortLevel in settings.json colocated with this script
 # (no env-passthrough dependency), else bucket $MAX_THINKING_TOKENS into tiers.
 # None present → no buff rendered.
-effort_tier="$(jqget '.reasoning_effort // .effort // empty' | tr '[:upper:]' '[:lower:]')"
+effort_tier="$(jqget '.reasoning_effort // (if (.effort|type)=="object" then .effort.level else .effort end) // empty' | tr '[:upper:]' '[:lower:]')"
 [ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
-    settings_file="$(dirname "${BASH_SOURCE[0]}")/settings.json"
+        settings_file="$CLAUDE_DIR/settings.json"
     if [ -f "$settings_file" ]; then
         effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
     fi
@@ -348,28 +380,42 @@ if [ -z "$effort_tier" ]; then
     esac
 fi
 
-# Ascending heat gradient: candle ember → molten volcano.
+# Ascending heat gradient: candle ember → molten volcano. Rendered as a
+# numeric tier (E1–E5) plus a 5-cell heat bar; hidden when no tier resolves.
 effort_buff=""
+effort_n=0
+effort_icon=""
+effort_color=""
 case "$effort_tier" in
-    low)    effort_buff="$(printf '%s🕯️ LOW%s'  "$DIMGOLD" "$RESET")" ;;
-    medium) effort_buff="$(printf '%s🔥 MED%s'  "$YELLOW"  "$RESET")" ;;
-    high)   effort_buff="$(printf '%s☄️ HIGH%s' "$ORANGE"  "$RESET")" ;;
-    xhigh)  effort_buff="$(printf '%s💥 XHI%s'  "$RED"     "$RESET")" ;;
-    max)    effort_buff="$(printf '%s🌋 MAX%s'  "$GOLD"    "$RESET")" ;;
+    low)    effort_n=1; effort_icon="🕯️"; effort_color="$DIMGOLD" ;;
+    medium) effort_n=2; effort_icon="🔥"; effort_color="$YELLOW" ;;
+    high)   effort_n=3; effort_icon="☄️"; effort_color="$ORANGE" ;;
+    xhigh)  effort_n=4; effort_icon="💥"; effort_color="$RED" ;;
+    max)    effort_n=5; effort_icon="🌋"; effort_color="$GOLD" ;;
 esac
+if [ "$effort_n" -gt 0 ]; then
+    ebar=""
+    for (( i=1; i<=5; i++ )); do
+        if [ "$i" -le "$effort_n" ]; then ebar+="${effort_color}▮"; else ebar+="${DIM}▯"; fi
+    done
+    effort_buff="$(printf '%s%s%sE%d%s %s%s' "$effort_color" "$effort_icon" "$BOLD" "$effort_n" "$RESET" "$ebar" "$RESET")"
+fi
 
 segs=()
 segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
     "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET" \
     "${effort_buff:+ $effort_buff}")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
+if [ -n "$gs_tokens" ]; then
+    segs+=("$(printf '%s%s%s%s' "$M_SAGE" "$gs_tokens" "$RESET")")
+elif [ -n "$branch" ]; then
+    segs+=("$(printf '%s✓%s' "$M_SAGE" "$RESET")")
+fi
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
     [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
     segs+=("$(printf '%s🌿 %s%s' "$branch_color" "$branch" "$RESET")")
 fi
-[ -n "$py" ]     && segs+=("$(printf '%s🐍 %s%s' "$M_TAN" "$py" "$RESET")")
-[ -n "$node" ]   && segs+=("$(printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET")")
 
 line2=""
 for s in "${segs[@]}"; do
