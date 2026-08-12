@@ -7,7 +7,7 @@
 # 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
-# settings.json: "statusLine": { "type": "command", "command": "~/.claude-profiles/lifanuke/rpg-statusline.sh" }
+# settings.json: "statusLine": { "type": "command", "command": "~/.claude/scripts/rpg-statusline.sh" }
 # Input: JSON object on stdin (statusline contract).
 
 set -euo pipefail
@@ -149,7 +149,7 @@ fi
 # Absent / unreadable / racing a cache write → ?? (never a fabricated number).
 week_known=0
 week_used_label="??"
-stats_file="$(dirname "${BASH_SOURCE[0]}")/stats-cache.json"
+stats_file="$(dirname "${BASH_SOURCE[0]}")/../stats-cache.json"
 if [ -f "$stats_file" ]; then
     week_tokens="$(jq -r '
         (now - 6*86400 | gmtime | strftime("%Y-%m-%d")) as $cut
@@ -335,7 +335,7 @@ dir_icon="🏰"
 effort_tier="$(jqget '.reasoning_effort // (if (.effort|type)=="object" then .effort.level else .effort end) // empty' | tr '[:upper:]' '[:lower:]')"
 [ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
-    settings_file="$(dirname "${BASH_SOURCE[0]}")/settings.json"
+        settings_file="$(dirname "${BASH_SOURCE[0]}")/../settings.json"
     if [ -f "$settings_file" ]; then
         effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
     fi
