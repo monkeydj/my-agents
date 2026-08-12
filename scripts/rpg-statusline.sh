@@ -339,7 +339,7 @@ else
 fi
 printf '%s' "$SEP"
 if [ "$week_rate_limited" -eq 1 ]; then
-    printf '%s💸 %s%s %s(rate-limit%%)%s' "$DIM" "$week_used_label" "$RESET" "$DIM" "$RESET"
+    printf '%s💸 %s%s' "$DIM" "$week_used_label" "$RESET"
 else
     printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
 fi
