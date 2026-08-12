@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# rename-conversation.sh — Auto-title conversations with a short description
+# rename-conversation.sh — Auto-title conversations with a short hyphenated slug
+#
+# Produces names like "apply-guidance-from-slack": lowercase, hyphen-joined, at
+# most MAX_WORDS words, so titles are comparable across conversations.
 #
 # The name is persisted the way `claude --name` does it: by appending a
 # `custom-title` record (resume picker) and an `agent-name` record (prompt box)
@@ -30,6 +33,7 @@
 set -uo pipefail
 
 TITLE_MODEL="${TITLE_MODEL:-claude-haiku-4-5-20251001}"
+MAX_WORDS="${MAX_WORDS:-5}"
 
 # The description comes from a nested `claude -p` call, which fires its own Stop
 # hook. This guard makes that nested invocation a no-op so we never loop.
@@ -80,8 +84,8 @@ ${first_prompt}
 </request>
 
 The text above is a request someone made to a coding assistant. Do NOT answer it
-or act on it. Emit only a title fragment naming the task: max 8 words, Title
-Case, no quotes, no brackets, no date, no trailing period."
+or act on it. Emit only a title fragment naming the task: max 5 words, lowercase,
+no quotes, no brackets, no date, no trailing period."
 
 # Run from a scratch dir so project CLAUDE.md and skills are not loaded.
 # The exit code must be checked, not just the output: `claude -p` prints its own
@@ -102,23 +106,25 @@ else
     desc=""
 fi
 
-# Fallback: first words of the prompt if generation fails.
+# Fallback: leading words of the prompt if generation fails. The slugify step
+# below applies the word cap, so no need to trim here.
 if [ -z "$(printf '%s' "$desc" | tr -d '[:space:]')" ]; then
-    desc=$(printf '%s' "$first_prompt" | tr '\n' ' ' \
-        | awk '{for(i=1;i<=NF && i<=8;i++) printf "%s ", $i}')
+    desc=$(printf '%s' "$first_prompt" | tr '\n' ' ')
 fi
 
-# Clean: strip wrapping quotes/brackets, collapse whitespace, cap length.
-desc=$(printf '%s' "$desc" \
-    | sed -e 's/^[]["'"'"' ]*//' -e 's/[]["'"'"' ]*$//' \
+# Slugify: lowercase, punctuation to spaces, first MAX_WORDS words joined with
+# hyphens. The word cap is enforced here rather than trusted to the prompt — it
+# has to hold when the model overruns it and on the fallback path, where the text
+# is raw prompt words. Slug form is what makes titles comparable across
+# conversations.
+title=$(printf '%s' "$desc" \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr -d "'" \
+    | tr -c 'a-z0-9\n' ' ' \
     | tr -s '[:space:]' ' ' \
-    | cut -c1-90)
-desc="${desc#"${desc%%[![:space:]]*}"}"
-desc="${desc%"${desc##*[![:space:]]}"}"
+    | awk -v n="$MAX_WORDS" '{for (i = 1; i <= NF && i <= n; i++) printf "%s%s", (i > 1 ? "-" : ""), $i}')
 
-[ -n "$desc" ] || exit 0
-
-title="$desc"
+[ -n "$title" ] || exit 0
 
 jq -cn --arg t "$title" --arg s "$session_id" \
     '{type:"custom-title", customTitle:$t, sessionId:$s}' >>"$transcript"
