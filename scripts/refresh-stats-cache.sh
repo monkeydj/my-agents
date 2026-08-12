@@ -9,7 +9,10 @@
 #
 # Usage in ~/.claude/settings.json:
 #   "hooks": {
-#     "SessionStart": [{ "command": "~/.claude/scripts/refresh-stats-cache.sh" }]
+#     "SessionStart": [{
+#       "matcher": "*",
+#       "hooks": [{ "type": "command", "command": "~/.claude/scripts/refresh-stats-cache.sh" }]
+#     }]
 #   }
 #
 # Or via cron for periodic background cleanup (recommended alongside):
