@@ -406,15 +406,14 @@ segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
     "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET" \
     "${effort_buff:+ $effort_buff}")")
 segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
-if [ -n "$gs_tokens" ]; then
-    segs+=("$(printf '%s%s%s%s' "$M_SAGE" "$gs_tokens" "$RESET")")
-elif [ -n "$branch" ]; then
-    segs+=("$(printf '%s✓%s' "$M_SAGE" "$RESET")")
-fi
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
     [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
-    segs+=("$(printf '%s🌿 %s%s' "$branch_color" "$branch" "$RESET")")
+    if [ -n "$gs_tokens" ]; then
+        segs+=("$(printf '%s🌿 %s %s%s' "$branch_color" "$gs_tokens" "$branch" "$RESET")")
+    else
+        segs+=("$(printf '%s🌿 %s%s' "$branch_color" "$branch" "$RESET")")
+    fi
 fi
 
 line2=""
