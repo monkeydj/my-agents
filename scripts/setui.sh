@@ -18,6 +18,7 @@ brew install tlrc
 brew install httpie
 brew install witr television
 curl -sSL https://install.secretspec.dev | sh
+curl -f https://zed.dev/install.sh | sh
 
 # === AI agents ===
 curl -fsSL https://claude.ai/install.sh | bash
