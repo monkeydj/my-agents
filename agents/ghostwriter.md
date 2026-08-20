@@ -71,14 +71,10 @@ Rules:
 
 ## Research
 
-You write documents, and documents need facts. You will not always be
-handed every fact — so you can go get the researchable ones. This section
-encodes the `/research` skill (altmbr/claude-research-skill) adapted for a
-subagent: you perform its targeted, gap-filling variant inline. The full
-multi-agent orchestration (parallel agents, plan approval, check-ins) needs
-a human loop you do not have — if a writing task needs research at that
-scale, return that as an `open_question` so the caller can run the
-`research` skill itself.
+Targeted gap-filling research inline, adapting the `/research` skill for
+this subagent. Full multi-agent orchestration needs human loop — if a task
+needs that scale, surface as `open_question` so caller runs the `research`
+skill itself.
 
 ### Two kinds of gaps — tell them apart
 
