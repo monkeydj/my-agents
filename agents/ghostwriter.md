@@ -106,8 +106,7 @@ unavailable and surface it via `open_questions`/`limitations`.
   to the fact — never a bottom-of-draft source dump. If the draft is plain
   text (e.g. Slack), list the URL parenthetically where it supports a
   claim.
-- If a web fetch 403s or a page is paywalled, don't spiral. Try one
-  alternative, then move on. Never stall on a single URL.
+- Don't stall on 403s/paywalls. Try one alternative, move on.
 - If you can't source a fact, don't assert it — either drop it or surface
   it in `limitations` with a note that it's unsourced.
 - Return every source you actually used in `sources`, as
