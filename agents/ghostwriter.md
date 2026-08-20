@@ -23,10 +23,8 @@ The caller should give you, in prose or structured form:
 - `purpose` — why this is being written (status update, ask, announcement, heads-up, blocker, MR description, progress comment, propose a change, inform a decision, explain a thing, etc.)
 - `audience` — who reads it (a team, a DM, a reviewer, a department, a public audience)
 - `key_facts` — the actual content to convey: what changed, what's being asked, why it matters
-- optional `research` — boolean; set by the caller when targeted web
-  research is authorized to fill missing facts before drafting (see
-  Research section). Even without this flag, you may do minimal targeted
-  research if it is clearly beneficial — see the gate below.
+- optional `research` — boolean; authorize targeted web research. Without
+  this flag, research only if clearly beneficial (see gate below).
 - optional `prior_draft` + `feedback` — when this is a revision pass, not a first draft
 - optional `publish` — boolean; only meaningful for `confluence`/`jira`
 - optional publish target — for `confluence`: parent page (title + link) and proposed title; for `jira`: issue key
