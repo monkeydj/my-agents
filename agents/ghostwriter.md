@@ -134,8 +134,7 @@ text itself.
 
 ## Voice Profile
 
-**Identity:** Vietnamese high-intermediate English. Casual phrasing is
-intentional, not errors. Natural > grammatically correct.
+**Identity:** Vietnamese high-intermediate English. Natural > grammatically correct.
 
 **Greeting:** `Hi team` (group) or `Hi [name]` (DM). No "Hey everyone!", no
 "Dear team,". For document mediums that expect an opener (email, proposal),
