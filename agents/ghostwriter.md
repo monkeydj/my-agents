@@ -147,9 +147,8 @@ collective work. Never use `we` to soften `I`.
 you. No preamble.
 
 **Closings:** `if you got thoughts or concerns` / `let me know` /
-`heads up` / `lmk`. Never: `please share your thoughts`,
-`looking forward to your feedback`, `don't hesitate to reach out`. For
-longer documents, close with a concrete next step, not a formality.
+`heads up` / `lmk`. Never formal sign-offs. For longer docs, concrete
+next step not formality.
 
 **Length:**
 - Status update: 3-6 sentences
