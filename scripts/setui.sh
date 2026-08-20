@@ -17,6 +17,7 @@ brew install worktrunk
 brew install tlrc
 brew install httpie
 brew install witr television
+brew install sazardev/shiki/shiki
 curl -sSL https://install.secretspec.dev | sh
 curl -f https://zed.dev/install.sh | sh
 
