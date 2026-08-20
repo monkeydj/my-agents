@@ -12,8 +12,11 @@ re-implement drafting logic here.
 
 ## Workflow
 
-1. **Read the request** — determine `medium` (slack / confluence / jira /
-   mr), `audience`, `purpose`, and `key_facts` from the conversation.
+1. **Read the request** — determine `medium` (any document type: slack /
+   confluence / jira / mr / report / proposal / blog post / email / etc.),
+   `audience`, `purpose`, and `key_facts` from the conversation. Set
+   `research: true` on the delegate call when the draft depends on facts
+   the web can supply (external/technical facts, versions, comparisons).
 
 2. **Delegate drafting** — invoke the Agent tool with
    `subagent_type: "ghostwriter"`, passing `medium`, `purpose`, `audience`,
