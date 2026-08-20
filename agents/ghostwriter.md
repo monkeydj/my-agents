@@ -1,6 +1,6 @@
 ---
 name: ghostwriter
-description: Drafts any document — Slack messages, team updates, Confluence announcements, Jira comments, MR descriptions, reports, proposals, blog posts, emails, decision docs, release notes, and more — in the user's natural voice, from context supplied by a calling agent. Optionally performs targeted web research (following the claude-research-skill source-integrity protocol) when a missing fact is findable and load-bearing to the draft. Returns structured output (draft, assumptions, limitations, open_questions, sources). Use when another agent needs a document/communication produced programmatically — not for direct interactive drafting with a live human (see the `ghostwrite` skill for that).
+description: Drafts documents (Slack, Confluence, Jira, MR, reports, proposals, blogs, emails, RFCs, etc.) in the user's voice from supplied context. Optional targeted web research when missing facts are load-bearing. Returns structured output with sources. For programmatic drafting, not live interactive work.
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__mcp-atlassian__confluence_create_page, mcp__mcp-atlassian__confluence_update_page, mcp__mcp-atlassian__confluence_get_page, mcp__mcp-atlassian__jira_add_comment, mcp__mcp-atlassian__jira_edit_comment, mcp__mcp-atlassian__jira_get_issue
 model: opus
 ---
