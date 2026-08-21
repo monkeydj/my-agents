@@ -31,6 +31,12 @@ npx -y defuddle parse <url> -p description
 npx -y defuddle parse <url> -p domain
 ```
 
+Pipe HTML over stdin (e.g. when `curl` handles redirects/auth better):
+
+```bash
+curl -L <url> | npx -y defuddle parse --md
+```
+
 ## Output formats
 
 | Flag | Format |
@@ -52,3 +58,4 @@ npx -y defuddle parse <url> -p domain
 - **Language hint**: `-l <code>` sets preferred content language (BCP 47, e.g. `en`, `ja`)
 - **Custom User-Agent**: `-u "<string>"` helps bypass 403/FORBIDDEN responses on sites that block default agents
 - **Debug mode**: `--debug` for troubleshooting failed extractions
+- **Extractable properties** (usable with `-p <name>`): `title`, `author`, `description`, `domain`, `site`, `favicon`, `image`, `language`, `published`, `wordCount`, plus raw `schemaOrgData` and `metaTags` via JSON output
