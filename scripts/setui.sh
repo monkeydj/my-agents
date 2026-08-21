@@ -14,6 +14,11 @@ brew install fzf
 # === Dev workflow tools ===
 brew install glab
 brew install worktrunk
+# 1. Install the CLI tools and Colima runtime via Homebrew
+brew install docker docker-compose colima
+
+# 2. Start the lightweight container engine
+colima start
 brew install tlrc
 brew install httpie
 brew install witr television
