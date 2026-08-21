@@ -50,5 +50,10 @@ Not just "tests pass." Before calling it done:
 - [ ] MR/PR description states scope, blast radius, and any cleanup or debt taken on
 - [ ] Self-check passes: proud to show a friend?
 
+## Links
+- `decision-gates.md` — blast radius and small-commits practice are the engineering analog of the Reversibility Gate.
+- `dissensus.md` — when a blast-radius check finds shared/systemic impact, that's the Scope Gate failing; pushback and negotiation take over from here.
+- `prima-flint.md` — "style preferences inferable from repo" (prima-flint's own words for what not to ask about) means inferable from these principles and the existing patterns they point to.
+
 ## KBS
 Operationalizes [[solve-right-problem-first]] — "zoom out before narrowing," "read before writing," "spike unknown territory before committing" are this rule's version of discovery-before-solution.
