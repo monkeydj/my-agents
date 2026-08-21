@@ -3,28 +3,22 @@
 # every brew install below depends on it.
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# === Runtime & toolchain managers ===
+# === Toolchain managers === (non-interactive, run early)
 curl https://mise.run | sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# === Shell productivity ===
-brew install zoxide
-brew install fzf
-
-# === Dev workflow tools ===
+# === Core dev workflow ===
+brew install docker docker-compose colima
+colima start
 brew install glab
 brew install worktrunk
-# 1. Install the CLI tools and Colima runtime via Homebrew
-brew install docker docker-compose colima
-
-# 2. Start the lightweight container engine
-colima start
 brew install tlrc
 brew install httpie
-brew install witr television
-brew install sazardev/shiki/shiki
-curl -sSL https://install.secretspec.dev | sh
-curl -f https://zed.dev/install.sh | sh
+
+# === Productivity tools ===
+brew install zoxide
+brew install fzf
+brew install sazardev/shiki/shiki  # TUI note taking
 
 # === AI agents ===
 curl -fsSL https://claude.ai/install.sh | bash
@@ -34,7 +28,6 @@ curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/instal
 rtk init --global
 
 # === Cloud tooling (GCP) — non-interactive downloads ===
-# SDK lives in ~/.local/google-cloud-sdk; CLIs exposed via ~/.local/bin
 mkdir -p "$HOME/.local/bin"
 curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
 tar -xf google-cloud-cli-darwin-arm.tar.gz -C "$HOME/.local"
