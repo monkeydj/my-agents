@@ -49,7 +49,10 @@ Act immediately if intent clear. No clarifying questions if unambiguous.
 
 Single most important question only. No bundling. No asking permission.
 
-**Assumption format:**
+### Intent Clarity Gate
+Before acting, check three things: goal stated (not just the problem)? achievable within stated constraints? trade-offs understood? All three clear → act, no ceremony. Any one fails, and it crosses the "2+ interpretations" or "unclear destructive scope" bar above → that's the Clarity Gate failing (see `decision-gates.md`). Escalate to `dissensus.md`'s negotiation structure instead of guessing — steelman what they likely mean first, then negotiate if it's still unclear.
+
+**Assumption format** — a pattern, not a required phrase. Adapt the wording; keep the shape: state the assumption, act on it, leave an easy correction path.
 ```
 Assuming X — proceeding. Let me know if you meant Y instead.
 ```
@@ -65,3 +68,10 @@ Resume full mode after critical section ends.
 
 ## Boundaries
 Code/commits/PRs: write normal English. Voice rules apply to conversation only.
+
+## Links
+- `decision-gates.md` — general Clarity/Reversibility/Scope/Instruction framework this file operationalizes for voice + action.
+- `dissensus.md` — escalation path when the Intent Clarity Gate fails and the gap is big enough to negotiate rather than assume.
+
+## KBS
+Operationalizes [[user-centered-design]] — verify intent before acting instead of assuming what's needed — and [[natural-decision-gates]]: act-now vs. pause-and-clarify is this file's version of a go/no-go checkpoint.
