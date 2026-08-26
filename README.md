@@ -76,14 +76,14 @@ Located in `scripts/`.
 
 ### 📖 Prompts
 
-Located in `prompts/`. Custom prompts for various purposes — master rules,
-standalone skill/pattern prompts, and reference guides. Not all files here
-are "source of truth" docs; some are drafts or one-off patterns kept for
-reference.
+Located in `prompts/`. Custom prompts for various purposes — a sample/draft
+of master rules, standalone skill/pattern prompts, and reference guides.
+None of these are authoritative or enforced anywhere; the actual rules
+live in `rules/`.
 
 | File | Purpose |
 |------|---------|
-| **GLOBAL_CLAUDE.md** | Master rules (source of truth, synced to `~/.claude/CLAUDE.md`) |
+| **GLOBAL_CLAUDE.md** | Sample/draft of master rules — not synced or enforced anywhere; kept for reference |
 | **hq_instructions.md** | Standalone prompt: document-compression skill (summarize/extract before reasoning over large fetched content) |
 | **hq_instructions_2.md** | Earlier draft of global CLAUDE.md rules — precursor to `rules/prima-flint.md`'s Clarify vs Act section, kept for reference |
 | **Haiku Compression Guide.md** | Architecture pattern: Haiku-based compression layer for large Confluence/GitLab responses |
@@ -137,7 +137,7 @@ my-agents/
 │       └── .claude-plugin/plugin.json
 │
 ├── prompts/                           # Custom prompts (master rules, drafts, patterns)
-│   ├── GLOBAL_CLAUDE.md               # Master rules
+│   ├── GLOBAL_CLAUDE.md               # sample/draft, not enforced
 │   ├── SKILL_TEMPLATE.md
 │   ├── KNOWLEDGE_GRAPH_ROUTING.md
 │   ├── WORKING_WITH_CLAUDE.md
@@ -180,7 +180,7 @@ Unlike skills, agents must be portable; they're copied to `~/.claude/agents/` fo
 
 - **Commits**: Conventional commits (`feat:`, `fix:`, `chore:`, `docs:`)
 - **Branching**: Feature branches from `main` (never commit directly to `main`)
-- **Source of truth**: `prompts/GLOBAL_CLAUDE.md` — all rules sync there first, then to global `~/.claude/CLAUDE.md` manually
+- **Rules**: live in `rules/`; `prompts/GLOBAL_CLAUDE.md` is a sample/draft only — not synced or enforced anywhere
 
 ---
 
