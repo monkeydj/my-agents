@@ -13,7 +13,7 @@ This is a personal Claude Code skills, agents, and operational rules repository.
 - **Skills** live in `skills/<name>/SKILL.md` — invoked with `/skillname`
 - **Agents** live in `agents/<name>.md` (single file, portable) — invoked programmatically
 - **Rules** live in `rules/` — shape decision-making and voice (prima-flint, craft-style, dissensus, endophosia)
-- **Conventions**: Conventional commits, branch from `main`, `instructions/GLOBAL_CLAUDE.md` is source of truth
+- **Conventions**: Conventional commits, branch from `main`, `prompts/GLOBAL_CLAUDE.md` is source of truth
 
 ## Skill Format
 

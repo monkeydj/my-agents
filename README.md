@@ -74,14 +74,22 @@ Located in `scripts/`.
 
 - **statusline.sh** — Claude Code session monitor with Pac-Man context-window visualization. Requires `jq` and `bc`.
 
-### 📖 Instructions
+### 📖 Prompts
 
-Located in `instructions/`.
+Located in `prompts/`. Custom prompts for various purposes — master rules,
+standalone skill/pattern prompts, and reference guides. Not all files here
+are "source of truth" docs; some are drafts or one-off patterns kept for
+reference.
 
-- **GLOBAL_CLAUDE.md** — Master rules (source of truth, synced to `~/.claude/CLAUDE.md`)
-- **KNOWLEDGE_GRAPH_ROUTING.md** — Knowledge graph navigation patterns
-- **SKILL_TEMPLATE.md** — Template for creating new skills
-- **WORKING_WITH_CLAUDE.md** — Integration notes
+| File | Purpose |
+|------|---------|
+| **GLOBAL_CLAUDE.md** | Master rules (source of truth, synced to `~/.claude/CLAUDE.md`) |
+| **hq_instructions.md** | Standalone prompt: document-compression skill (summarize/extract before reasoning over large fetched content) |
+| **hq_instructions_2.md** | Earlier draft of global CLAUDE.md rules — precursor to `rules/prima-flint.md`'s Clarify vs Act section, kept for reference |
+| **Haiku Compression Guide.md** | Architecture pattern: Haiku-based compression layer for large Confluence/GitLab responses |
+| **KNOWLEDGE_GRAPH_ROUTING.md** | Knowledge graph navigation patterns |
+| **SKILL_TEMPLATE.md** | Template for creating new skills |
+| **WORKING_WITH_CLAUDE.md** | Reference: explicitly invoking skills/MCP tools/plugins to skip inference overhead |
 
 ---
 
@@ -128,11 +136,14 @@ my-agents/
 │       ├── agents/ → (symlink to ../agents)
 │       └── .claude-plugin/plugin.json
 │
-├── instructions/                      # Reference & onboarding
+├── prompts/                           # Custom prompts (master rules, drafts, patterns)
 │   ├── GLOBAL_CLAUDE.md               # Master rules
 │   ├── SKILL_TEMPLATE.md
 │   ├── KNOWLEDGE_GRAPH_ROUTING.md
-│   └── ...
+│   ├── WORKING_WITH_CLAUDE.md
+│   ├── hq_instructions.md
+│   ├── hq_instructions_2.md           # draft precursor to rules/prima-flint.md
+│   └── Haiku Compression Guide.md
 │
 ├── scripts/                           # Utility scripts
 │   └── statusline.sh
@@ -148,7 +159,7 @@ my-agents/
 1. Create `skills/<name>/SKILL.md`
 2. Include frontmatter: `name`, `description`, `origin` (optional)
 3. Define trigger phrases, phases, and examples
-4. Reference `instructions/SKILL_TEMPLATE.md` for format
+4. Reference `prompts/SKILL_TEMPLATE.md` for format
 
 No build system required. Skills load directly in Claude Code.
 
@@ -169,7 +180,7 @@ Unlike skills, agents must be portable; they're copied to `~/.claude/agents/` fo
 
 - **Commits**: Conventional commits (`feat:`, `fix:`, `chore:`, `docs:`)
 - **Branching**: Feature branches from `main` (never commit directly to `main`)
-- **Source of truth**: `instructions/GLOBAL_CLAUDE.md` — all rules sync there first, then to global `~/.claude/CLAUDE.md` manually
+- **Source of truth**: `prompts/GLOBAL_CLAUDE.md` — all rules sync there first, then to global `~/.claude/CLAUDE.md` manually
 
 ---
 
