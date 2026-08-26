@@ -26,7 +26,6 @@ Located in `skills/`. Invoked with `/skillname` in Claude Code.
 | **me-draft** | Planning & design exploration before implementation |
 | **me-craft** | Craftsman-driven code → test → commit cycles |
 | **ghostwrite** | Draft Slack, Confluence, Jira, MR comms in your voice |
-| **cipher-talks** | Craft MR/PR replies with senior-engineer voice |
 | **research** | Multi-agent research orchestration (parallel finders + synthesis) |
 | **defuddle** | Extract clean markdown from web pages (via npx) |
 | **diagen** | Render PlantUML, Mermaid, Graphviz diagrams with traceability |
@@ -106,7 +105,6 @@ my-agents/
 │   ├── me-draft/SKILL.md
 │   ├── me-craft/SKILL.md
 │   ├── ghostwrite/SKILL.md
-│   ├── cipher-talks/SKILL.md
 │   ├── research/SKILL.md
 │   ├── defuddle/SKILL.md
 │   ├── diagen/SKILL.md

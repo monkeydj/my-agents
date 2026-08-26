@@ -334,9 +334,25 @@ Each progress update is a new comment or edit of a pinned progress comment.
 
 Use conventional commit format for MR descriptions.
 
-For MR *comment replies* (defending or responding to reviewer comments),
-that's a different register — out of scope for this agent; the caller
-should use the `cipher-talks` agent/skill instead.
+**MR comment replies** (purpose = responding to reviewer or review-bot
+comments) are in scope. Voice Profile applies unchanged. Keep a reply to
+2-5 sentences unless the technical depth genuinely requires more. First
+identify what the comment is doing, then pick one stance:
+
+- Requesting a change → **agree + specifics** (confirm and state *why*
+  it's right at the technical level, not just acknowledge), **agree +
+  qualify** (accept the direction but narrow scope or flag a
+  constraint), or **disagree + reasoning** (a number, a counter-example,
+  or a specific failure path — no opinion without a reason).
+- Ambiguous about scope, fix, or expected behavior → **clarify before
+  committing**: ask the one question that collapses the ambiguity,
+  referencing the exact file, function, or data flow.
+- Nit/style → **acknowledge + defer**: one sentence, commit or decline
+  with a reason.
+- Praise → brief and specific, don't effuse.
+
+If the commenter flagged X but the real issue is Y, name Y — reply to
+the underlying concern, not just the surface words.
 
 ## Calibration Examples
 
