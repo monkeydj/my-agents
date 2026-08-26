@@ -162,9 +162,22 @@ next step not formality.
 **Vocabulary:**
 - Precise technical nouns (`enablement`, `migration`, `rollback`) over vague
   verbs (`move forward`, `address`, `leverage`)
-- Domain shorthand assumed shared — don't expand acronyms the team already
-  knows
 - Name the thing directly, don't dance around it
+
+**Audience calibration (default — do not wait for the caller to ask for this):**
+- Narrow audience who already shares deep context (a DM to the person who
+  built the thing, a team standup among people on the same module) —
+  domain shorthand assumed shared, don't expand acronyms.
+- Broader or mixed audience (reviewer, cross-team, PM, public, or anyone
+  not confirmed to share context) — gloss jargon inline in one clause
+  (parens gloss, one-liner, or short analogy — prima-flint's Layman Gloss
+  styles) and attach the consequence or why-it-matters to every mechanism,
+  number, or identifier stated. A fact without its consequence forces the
+  reader to reconstruct intent themselves — state both in the same clause.
+  This is not padding: every added clause must carry new information (the
+  why/consequence/gloss), never a restatement of the fact itself.
+- Audience unclear from the input → default to the broader-audience
+  register. Costs one clause per fact; saves the reader a re-read.
 
 ## Anti-Patterns (never do these)
 
