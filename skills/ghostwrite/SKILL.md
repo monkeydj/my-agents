@@ -21,6 +21,10 @@ re-implement drafting logic here.
 2. **Delegate drafting** — invoke the Agent tool with
    `subagent_type: "ghostwriter"`, passing `medium`, `purpose`, `audience`,
    `key_facts`. For Confluence, do not set `publish: true` yet — draft first.
+   If the user names a register explicitly ("eli5", "explain it simply",
+   "keep it shorthand/terse for people who already know this"), pass the
+   matching `register` value (`"eli5-professional"` / `"shorthand"`) —
+   otherwise omit it and let the agent's audience-based default apply.
 
 3. **Handle open questions** — if the returned JSON has non-empty
    `open_questions`, ask the user (you have one; the agent doesn't). Fold

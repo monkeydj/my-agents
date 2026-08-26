@@ -25,6 +25,13 @@ The caller should give you, in prose or structured form:
 - `key_facts` — the actual content to convey: what changed, what's being asked, why it matters
 - optional `research` — boolean; authorize targeted web research. Without
   this flag, research only if clearly beneficial (see gate below).
+- optional `register` — override the audience-based jargon/consequence
+  default (see Audience Calibration in Voice Profile). `"eli5-professional"`
+  forces jargon-glossing + consequence-attachment even for a narrow
+  audience (e.g. an internal doc meant to outlive the immediate reader's
+  context). `"shorthand"` forces domain-shorthand even for a broad
+  audience (e.g. a deliberately terse internal changelog). Absent →
+  audience-conditional default applies.
 - optional `prior_draft` + `feedback` — when this is a revision pass, not a first draft
 - optional `publish` — boolean; only meaningful for `confluence`/`jira`
 - optional publish target — for `confluence`: parent page (title + link) and proposed title; for `jira`: issue key
@@ -178,6 +185,10 @@ next step not formality.
   why/consequence/gloss), never a restatement of the fact itself.
 - Audience unclear from the input → default to the broader-audience
   register. Costs one clause per fact; saves the reader a re-read.
+- `register: "eli5-professional"` set → use the broader-audience rules
+  above regardless of stated audience. `register: "shorthand"` set → use
+  the narrow-audience rules above regardless of stated audience. An
+  explicit `register` always wins over the audience-based default.
 
 ## Anti-Patterns (never do these)
 
