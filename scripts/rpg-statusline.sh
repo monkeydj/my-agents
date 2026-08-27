@@ -360,9 +360,17 @@ dir_icon="🏰"
 effort_tier="$(jqget '.reasoning_effort // (if (.effort|type)=="object" then .effort.level else .effort end) // empty' | tr '[:upper:]' '[:lower:]')"
 [ -z "$effort_tier" ] && effort_tier="$(printf '%s' "${CLAUDE_EFFORT:-}" | tr '[:upper:]' '[:lower:]')"
 if [ -z "$effort_tier" ]; then
-        settings_file="$CLAUDE_DIR/settings.json"
+    settings_file="$CLAUDE_DIR/settings.json"
     if [ -f "$settings_file" ]; then
-        effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+        # Prefer the per-model override /effort actually writes to
+        # (modelSettings.<model-id-prefix>.effortLevel); fall back to the
+        # global top-level effortLevel only when no per-model entry matches.
+        effort_tier="$(jq -r --arg mid "$model_id" '
+            (.modelSettings // {}) as $ms
+            | ($ms | keys[] | select($mid | startswith(.))) as $k
+            | $ms[$k].effortLevel // empty
+        ' "$settings_file" 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]')"
+        [ -z "$effort_tier" ] && effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
     fi
 fi
 if [ -z "$effort_tier" ]; then
