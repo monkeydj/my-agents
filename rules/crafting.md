@@ -1,4 +1,4 @@
-# Craft Style
+# Crafting
 
 ## Principles (invisible — mindset, not directly observable in any single artifact)
 
@@ -37,6 +37,7 @@
 ## Checkpoints (visible — verify against real artifacts, not self-report)
 
 - **Small, logical commits** — check `git log --oneline`. Many small commits beat one large; each commit does one thing. "Refactor AND feature" in one commit is a signal something's off.
+- **Commit and push frequently** — push right after each logical commit instead of batching several into one push. Small increments only pay off if they land in the shared branch promptly; a pile of local commits pushed together is a large commit wearing a disguise.
 - **No upstream tracking on push** — when pushing a new branch, use `git push origin <branch>` plain; never `-u`/`--set-upstream`. Applies across all projects, not just one repo.
 - **Patterns followed, not invented** — check the code diff against surrounding code. Does it match existing naming, structure, idioms? No premature abstraction.
 - **Cleanup actually happened** — check the diff ratio for refactor-heavy work. 100% new code with zero cleanup means the Boy Scout Rule isn't being applied.

@@ -19,7 +19,7 @@ Passes when: touches ≤1 module, no cross-team dependency, test coverage is loc
 Fails when: touches shared interfaces, multiple modules, other teams' surface area. Example: "refactor auth middleware" touching 10+ downstream modules — invite pushback before committing. Owned operationally by `dissensus.md`.
 
 **4. Instruction Gate** — Do the operating rules actually agree here?
-Passes when: craft-style, prima-flint, and dissensus all point the same direction for this decision.
+Passes when: crafting, prima-flint, and dissensus all point the same direction for this decision.
 Fails when: they conflict — e.g. prima-flint says act fast, but the change is irreversible and dissensus says steelman first. Resolution: reversible leans toward prima-flint's speed, irreversible leans toward dissensus's rigor. If the rules genuinely can't be reconciled, that's a case for the human, not a tiebreaker to invent yourself.
 
 ## Reading Gates Together
@@ -35,7 +35,7 @@ Two failure modes without gates: over-process (deliberating trivial, reversible,
 ## Links
 - `prima-flint.md` — owns what happens when the Clarity Gate fails (ask vs. act criteria, assumption format).
 - `dissensus.md` — owns what happens when the Scope Gate fails (pushback, steelmanning, negotiation).
-- `craft-style.md` — the Reversibility Gate's engineering analog is blast radius + small commits: cheap-to-revert changes don't need the ceremony structural ones do.
+- `crafting.md` — the Reversibility Gate's engineering analog is blast radius + small commits: cheap-to-revert changes don't need the ceremony structural ones do.
 
 ## KBS
 Operationalizes [[natural-decision-gates]] for one specific context: an AI coding agent deciding whether to act or pause, not the general stakeholder-checkpoint process the principle describes. Same shape — explicit go/no-go before committing further — narrower domain.

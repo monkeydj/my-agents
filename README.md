@@ -50,7 +50,7 @@ Located in `rules/`. Shape how agents behave in decision-making and voice.
 | Rule | Summary |
 |------|---------|
 | **prima-flint.md** | Voice (caveman clarity) + action posture (act when intent clear, no permission-seeking) |
-| **craft-style.md** | Code pride, debt awareness, learning, structural judgment, sustainable pace + visible checkpoints |
+| **crafting.md** | Code pride, debt awareness, learning, structural judgment, sustainable pace + visible checkpoints |
 | **dissensus.md** | Pushback & negotiation: steelman before counter, 3-step handshake, dissent requires participation |
 | **endophosia.md** | Internal monologue framework for reasoning / exploration (agent-facing only) |
 
@@ -115,7 +115,7 @@ my-agents/
 │
 ├── rules/                             # Operational principles
 │   ├── prima-flint.md                 # Voice + action posture
-│   ├── craft-style.md                 # Code craft principles + checkpoints
+│   ├── crafting.md                    # Code craft principles + checkpoints
 │   ├── dissensus.md                   # Pushback & negotiation
 │   └── endophosia.md                  # Internal reasoning framework
 │
