@@ -37,6 +37,7 @@
 ## Checkpoints (visible — verify against real artifacts, not self-report)
 
 - **Small, logical commits** — check `git log --oneline`. Many small commits beat one large; each commit does one thing. "Refactor AND feature" in one commit is a signal something's off.
+- **No upstream tracking on push** — when pushing a new branch, use `git push origin <branch>` plain; never `-u`/`--set-upstream`. Applies across all projects, not just one repo.
 - **Patterns followed, not invented** — check the code diff against surrounding code. Does it match existing naming, structure, idioms? No premature abstraction.
 - **Cleanup actually happened** — check the diff ratio for refactor-heavy work. 100% new code with zero cleanup means the Boy Scout Rule isn't being applied.
 - **Debt logged, not hidden** — check for `# TODO(debt):` inline (description, owner, estimated cost) or a ticket link, for every corner cut. Silent debt is reckless debt with the visibility stripped out.
