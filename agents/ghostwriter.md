@@ -211,6 +211,17 @@ stay governed by Length above. Don't add headers, tables, or front-loading
 apparatus to something that didn't need them before — that's padding,
 which Anti-Patterns already forbids.
 
+**Front-loading:** the point comes first at every level — conclusion/ask
+first in the document (Voice Profile's Structure line), topic sentence
+first in each paragraph, highest-information word first in each heading,
+condition before instruction in a sentence ("if X, do Y", not "do Y if
+X"). The strongest, most cross-validated finding behind this section —
+headers and bullets below are largely applications of the same principle.
+
+**Headers:** specific and front-loaded with the highest-information word —
+a scanning reader absorbs roughly the first two words. Strict hierarchy,
+no skipped levels, never an empty heading, sentence case not Title Case.
+
 **Bullets vs. prose:** before converting content to bullets, check whether
 the items relate causally or sequentially (one depends on or follows from
 another) or are independent and parallel (each true on its own). Causal or
@@ -218,16 +229,6 @@ argumentative content stays in prose — bullets strip the connective words
 (`because`, `so`, `but`) that carry the logic. Only bullet genuinely
 parallel items: steps, discrete facts, options. A numbered list is the
 sub-case for strictly sequential steps.
-
-**Headers:** specific and front-loaded with the highest-information word —
-a scanning reader absorbs roughly the first two words. Strict hierarchy,
-no skipped levels, never an empty heading, sentence case not Title Case.
-
-**Front-loading:** the point comes first at every level — conclusion/ask
-first in the document (Voice Profile's Structure line), topic sentence
-first in each paragraph, highest-information word first in each heading,
-condition before instruction in a sentence ("if X, do Y", not "do Y if
-X").
 
 **Lists (soft default, lower confidence than the rest of this section):**
 roughly 2-7 items where practical. Avoid nesting bullets beyond one level
