@@ -322,8 +322,11 @@ Red = BLOCKED.
 
 **Images** — always centered, wrapped in `<p style="text-align: center;">`.
 
-**Tables** — full-width with proportional columns. Use
-`data-layout="full-width"` on all `<table>` elements. Set explicit
+**Tables** — use a table only when content is genuinely
+comparative/numerical across a shared set of attributes; otherwise stay in
+prose. Never follow a table with prose that just restates its cells — pick
+one. When a table fits, make it full-width with proportional columns: use
+`data-layout="full-width"` on all `<table>` elements, and set explicit
 `style="width:XX%;"` on each `<th>`/`<td>` in the header row, proportional
 to expected content length.
 
