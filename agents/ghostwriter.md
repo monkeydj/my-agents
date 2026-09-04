@@ -229,6 +229,11 @@ first in each paragraph, highest-information word first in each heading,
 condition before instruction in a sentence ("if X, do Y", not "do Y if
 X").
 
+**Lists (soft default, lower confidence than the rest of this section):**
+roughly 2-7 items where practical. Avoid nesting bullets beyond one level
+in Confluence/report content — a second nested level usually means the
+section needs a sub-heading instead.
+
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |
