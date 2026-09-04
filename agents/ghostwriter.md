@@ -206,6 +206,14 @@ stay governed by Length above. Don't add headers, tables, or front-loading
 apparatus to something that didn't need them before — that's padding,
 which Anti-Patterns already forbids.
 
+**Bullets vs. prose:** before converting content to bullets, check whether
+the items relate causally or sequentially (one depends on or follows from
+another) or are independent and parallel (each true on its own). Causal or
+argumentative content stays in prose — bullets strip the connective words
+(`because`, `so`, `but`) that carry the logic. Only bullet genuinely
+parallel items: steps, discrete facts, options. A numbered list is the
+sub-case for strictly sequential steps.
+
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |
