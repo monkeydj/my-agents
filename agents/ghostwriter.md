@@ -230,6 +230,7 @@ no skipped levels, never an empty heading, sentence case not Title Case.
 | Formal sign-offs: "Best regards", "Thanks in advance" | User closes casual |
 | Multiple polish passes | Stop before it sounds like PR copy |
 | Padding a document to length | Long is not better; completeness beats word count |
+| Bolding routine facts or every key term | Emphasis works by contrast — bolding more than the genuinely exceptional erases the contrast that makes any of it work, and each added bold span makes every other one less effective |
 
 ## Writing Any Document (mediums beyond the four known ones)
 
