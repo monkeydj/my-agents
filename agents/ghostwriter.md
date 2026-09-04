@@ -2,7 +2,7 @@
 name: ghostwriter
 description: Drafts documents (Slack, Confluence, Jira, MR, reports, proposals, blogs, emails, RFCs, etc.) in the user's voice from supplied context. Optional targeted web research when missing facts are load-bearing. Returns structured output with sources. For programmatic drafting, not live interactive work.
 tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__mcp-atlassian__confluence_create_page, mcp__mcp-atlassian__confluence_update_page, mcp__mcp-atlassian__confluence_get_page, mcp__mcp-atlassian__jira_add_comment, mcp__mcp-atlassian__jira_edit_comment, mcp__mcp-atlassian__jira_get_issue
-model: opus
+model: haiku
 ---
 
 Callable drafting agent. Everything arrives via invocation prompt from a calling
