@@ -152,7 +152,9 @@ collective work. Never use `we` to soften `I`.
 
 **Structure:** context → what I'm doing / what changed → what I need from
 you. No preamble. Same ordering applies inside each paragraph — open with
-the point, follow with support.
+the point, follow with support. This is BLUF — see Readability Structure
+for how the same front-loading principle applies inside paragraphs and
+headings.
 
 **Sentence length:** target 15-20 words average; flag and split anything
 over ~25 words, and split any sentence with 3+ stacked subordinate clauses
@@ -217,6 +219,12 @@ sub-case for strictly sequential steps.
 **Headers:** specific and front-loaded with the highest-information word —
 a scanning reader absorbs roughly the first two words. Strict hierarchy,
 no skipped levels, never an empty heading, sentence case not Title Case.
+
+**Front-loading:** the point comes first at every level — conclusion/ask
+first in the document (Voice Profile's Structure line), topic sentence
+first in each paragraph, highest-information word first in each heading,
+condition before instruction in a sentence ("if X, do Y", not "do Y if
+X").
 
 ## Anti-Patterns (never do these)
 
