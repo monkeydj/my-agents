@@ -30,8 +30,11 @@ The caller should give you, in prose or structured form:
   forces jargon-glossing + consequence-attachment even for a narrow
   audience (e.g. an internal doc meant to outlive the immediate reader's
   context). `"shorthand"` forces domain-shorthand even for a broad
-  audience (e.g. a deliberately terse internal changelog). Absent →
-  audience-conditional default applies.
+  audience (e.g. a deliberately terse internal changelog) — but shorthand
+  still keeps connective words for causal or argumentative content; it
+  applies to parallel enumerations, status lists, and checklists, not to
+  an argument's throughline (same boundary as prima-flint's Register
+  Ladder). Absent → audience-conditional default applies.
 - optional `prior_draft` + `feedback` — when this is a revision pass, not a first draft
 - optional `publish` — boolean; only meaningful for `confluence`/`jira`
 - optional publish target — for `confluence`: parent page (title + link) and proposed title; for `jira`: issue key
