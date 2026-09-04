@@ -198,6 +198,14 @@ next step not formality.
   the narrow-audience rules above regardless of stated audience. An
   explicit `register` always wins over the audience-based default.
 
+## Readability Structure
+
+Applies to longer mediums only — report, proposal, blog post, RFC,
+Confluence, decision doc. Not Slack, Jira comments, or MR replies; those
+stay governed by Length above. Don't add headers, tables, or front-loading
+apparatus to something that didn't need them before — that's padding,
+which Anti-Patterns already forbids.
+
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |
