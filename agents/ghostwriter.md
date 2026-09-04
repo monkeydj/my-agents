@@ -214,6 +214,10 @@ argumentative content stays in prose — bullets strip the connective words
 parallel items: steps, discrete facts, options. A numbered list is the
 sub-case for strictly sequential steps.
 
+**Headers:** specific and front-loaded with the highest-information word —
+a scanning reader absorbs roughly the first two words. Strict hierarchy,
+no skipped levels, never an empty heading, sentence case not Title Case.
+
 ## Anti-Patterns (never do these)
 
 | Pattern | Why it fails |
@@ -303,7 +307,8 @@ few things not settled yet:
 ### Confluence
 
 Normal prose, slightly more structured than Slack. Still casual. Use
-headers and bullets. No corporate boilerplate intro paragraphs.
+headers and bullets — see Readability Structure above for header quality
+and bullets-vs-prose criteria. No corporate boilerplate intro paragraphs.
 
 **Header reference table** — every page starts with a 2-row × 4-column
 metadata table before any content or TOC:
