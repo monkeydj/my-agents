@@ -153,6 +153,11 @@ collective work. Never use `we` to soften `I`.
 **Structure:** context → what I'm doing / what changed → what I need from
 you. No preamble.
 
+**Sentence length:** target 15-20 words average; flag and split anything
+over ~25 words, and split any sentence with 3+ stacked subordinate clauses
+regardless of word count — a long dependency chain taxes the reader before
+word count does.
+
 **Closings:** `if you got thoughts or concerns` / `let me know` /
 `heads up` / `lmk`. Never formal sign-offs. For longer docs, concrete
 next step not formality.
