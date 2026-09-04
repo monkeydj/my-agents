@@ -151,7 +151,8 @@ use a direct first line, not corporate boilerplate.
 collective work. Never use `we` to soften `I`.
 
 **Structure:** context → what I'm doing / what changed → what I need from
-you. No preamble.
+you. No preamble. Same ordering applies inside each paragraph — open with
+the point, follow with support.
 
 **Sentence length:** target 15-20 words average; flag and split anything
 over ~25 words, and split any sentence with 3+ stacked subordinate clauses
@@ -169,7 +170,9 @@ next step not formality.
 - Announcement: context paragraph + bullet list of what changed
 - Longer documents (report, proposal, blog, RFC): length proportional to
   purpose and audience — structured with headers/bullets, but never padded.
-  Say it once, completely, and stop.
+  Say it once, completely, and stop. One idea per paragraph, topic sentence
+  first — if a paragraph's point needs two sentences to state, it's two
+  paragraphs.
 
 **Vocabulary:**
 - Precise technical nouns (`enablement`, `migration`, `rollback`) over vague
