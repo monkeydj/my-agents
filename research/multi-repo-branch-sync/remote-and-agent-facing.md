@@ -284,6 +284,19 @@ One subtlety for agents: `codebase-memory-mcp` and Claude Code record *paths*. I
 
 Recommendation for the stated setup: **B + D**. The bare mirror is the only thing that fetches, so credentials (Section 4) are needed in exactly one place; detached worktrees mean no branch can be accidentally moved by a reader; the symlink flip is what makes "never half-updated" true regardless of who is reading, rather than true only for readers that follow the contract. Layout A is acceptable as a first iteration if the snapshot step is added later — the status file in Section 3 is designed so readers cannot tell the difference.
 
+### 2.7 Cost model (per repo, steady state)
+
+Let `O` be the size of the repo's object store, `W` the size of one checked-out working tree, `B` the number of major branches mirrored, and `S` the number of snapshots retained per branch (2 with the Section 3 grace period: current and previous). The human's clone already costs `O + W` and is outside this budget.
+
+| Layout | Disk added by the mirror | Written per refresh (branch changed) | Fetches from forge |
+|---|---|---|---|
+| A — plain second clone per branch | `B × (O + W)` | in-place file rewrite, size of the diff | `B` (or 1 with a multi-branch refspec) |
+| B — bare mirror + detached worktrees | `O + B × W` | in-place file rewrite, size of the diff | 1 |
+| B + C — mirror as alternate for the human's clone | `O + B × W`, minus up to `O` reclaimed from the human's clone | same as B | 1 (human's fetch also shrinks) |
+| B + D — snapshot worktrees behind a symlink | `O + B × S × W` | full `W` (a new worktree is materialised) | 1 |
+
+Reading the table: the object store is paid once in every layout except A, so for repos where `O ≫ W` (long history, small tree — most services) B costs about the same as one extra clone regardless of `B`. Layout D's extra cost is `(S − 1) × B × W` of disk plus a full `W` of writes per changed branch per refresh; for a service repo with a working tree in the tens of megabytes that is negligible on an SSD, and for a monorepo with a multi-gigabyte tree it is the reason to fall back to B and rely on the status file for consistency. There are no absolute numbers here because they depend entirely on the repos in question; measure `O` with `git count-objects -vH` in the mirror and `W` with `du -sh` on one snapshot, then read the table.
+
 ## 3. Consistency contract
 
 **Context for this section.** Layout B+D from Section 2 makes each *tree* consistent. It does not tell an agent which tree is current, whether a refresh is running, when the last one succeeded, or what changed since the agent last looked. That is what the contract is for: a small amount of metadata, written by exactly one process (the refresh script) and read by everyone else. The section first collects the evidence git and prior art already give, then proposes the contract.
