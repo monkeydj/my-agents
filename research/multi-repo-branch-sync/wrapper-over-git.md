@@ -359,7 +359,16 @@ Which local `release*` branches should exist at all? Two policies:
 
 ### 2.4 `glab repo view` for the default branch
 
-The rendered glab docs page for `glab repo view` could not be fetched (the GitLab web UI served only a JavaScript loading shell). What is known from the glab CLI's own `--help` and its docs at [gitlab.com/gitlab-org/cli](https://gitlab.com/gitlab-org/cli/-/tree/main/docs/source/repo): `glab repo view [repository] [flags]` accepts `OWNER/REPO`, a `group/subgroup/repo` path, a full URL, or no argument for the current directory, and prints the project description plus README by default; the `-b/--branch` and `-w/--web` flags exist. Whether a stable JSON output flag exists on the installed version should be verified locally with `glab repo view --help`; the reliable alternative for a default-branch query on GitLab is the REST API through `glab api`, which is covered in Section 6 and returns `default_branch` as a field:
+Verified against the glab source-tree docs on 2026-09-07 ([gitlab-org/cli, docs/source/repo/view.md](https://gitlab.com/gitlab-org/cli/-/raw/main/docs/source/repo/view.md)); the earlier fetch of the rendered page had returned only a JavaScript shell. `glab repo view [repository] [flags]` will "Display the description and README of a project, or open it in the browser." The repository argument accepts no argument (current directory, "must be a Git repository"), `user/repo`, `group/namespace/repo`, an SSH URL (`git@gitlab.com:user/repo.git`) or an HTTPS URL. Documented flags:
+
+| Flag | Doc wording |
+|---|---|
+| `-b, --branch string` | "View a specific branch of the repository." |
+| `-w, --web` | "Open a project in the browser." |
+| `-F, --output string` | "Format output as: text, json. (default "text")" |
+| `--jq string` | "Filter JSON output with a jq expression." |
+
+So a JSON output flag **does** exist: `glab repo view group/project -F json` returns the project object, and `--jq .default_branch` (or an external `jq`) extracts the default branch without a hand-built REST call. The docs page does not list the JSON field names, so `default_branch` is inferred from the REST project object the command wraps; confirm once with `glab repo view -F json | jq keys` on the installed version. The `glab api` route below remains valid and is the fallback for older glab releases that predate `-F`:
 
 ```zsh
 # Project path must be URL-encoded (slash → %2F)
@@ -984,7 +993,7 @@ GIT_ASKPASS=$askpass GIT_TERMINAL_PROMPT=0 git -C "$repo" fetch --prune origin
 
 Simpler alternative when the human has run `gh auth setup-git` once: gh registers itself as git's credential helper for `github.com`, and every git HTTPS call resolves the token through gh automatically — nothing for the wrapper to do. Check with `git config --get-all credential.https://github.com.helper`. Whichever route is used, `gh auth token` output must never reach the per-repo log (4.4); the `GIT_ASKPASS` indirection keeps it out of `set -x` traces as well.
 
-**`glab auth status`** performs the same role for GitLab: it reports the configured hosts, whether the token is valid, the token's scopes, and the API/git protocol in use, and exits non-zero on failure. `-h/--hostname` scopes it to one self-managed instance; `-t/--show-token` prints the token. (Wording not quoted verbatim here because the rendered glab docs page could not be fetched in Section 2.4; verify locally with `glab auth status --help`.)
+**`glab auth status`** performs the same role for GitLab ([gitlab-org/cli, docs/source/auth/status.md](https://gitlab.com/gitlab-org/cli/-/raw/main/docs/source/auth/status.md), verified 2026-09-07): its one-line description is "View authentication status". By default it checks the instance in the current context (derived from the `git remote`, the `GITLAB_HOST` environment variable, or the config); `-a, --all` checks every configured instance; `--hostname string` checks one named instance — note there is **no** `-h` short form, since `-h` is `--help`; `-t, --show-token` will "Display the authentication token" (never in a log). Two things the page does **not** document: the exit code on an invalid token, and the exact fields printed (scopes, API/git protocol). The pre-flight below treats any non-zero exit as "not authenticated" and discards the output. That is only sufficient if glab really exits non-zero on a rejected token, which the docs do not promise — so confirm once locally with `GITLAB_TOKEN=bogus glab auth status --hostname <host>; echo $?`. If it exits 0 on a bad token, grep the output for the error marker instead of trusting the exit code.
 
 Pre-flight block:
 
@@ -1164,3 +1173,32 @@ What the forge layer adds, summarised against the plain-git baseline:
 | Rate-limit exposure of the per-run sync | none (git transport) | still none, as long as forge calls stay in discovery/pre-flight |
 
 The design consequence is a clean separation: **git owns the sync loop; the forge CLIs own the inventory and the pre-flight.** Neither the reading agents nor the per-repo refresh path ever depend on `gh` or `glab` being installed, authenticated, or under quota.
+
+## Verification pass (2026-09-07)
+
+Second pass over the two items this file had marked as unfetchable. Each was resolved on the first URL tried; the rendered `docs.gitlab.com/cli/` pages were not needed.
+
+| # | Item | Outcome | Source |
+|---|---|---|---|
+| 1 | `glab repo view` flags and JSON output (Section 2.4) | **Resolved.** Synopsis "Display the description and README of a project, or open it in the browser." Flags: `-b, --branch string` ("View a specific branch of the repository."), `-w, --web` ("Open a project in the browser."), `-F, --output string` ("Format output as: text, json. (default "text")"), `--jq string` ("Filter JSON output with a jq expression."). Repository argument accepts none (current git dir), `user/repo`, `group/namespace/repo`, SSH URL, HTTPS URL. So a JSON output flag exists; Section 2.4 was rewritten to use `-F json --jq .default_branch` with the `glab api` route kept as the fallback for older releases. The JSON field names are not listed on the page, so `default_branch` is inferred from the REST project object and flagged for a one-time local check. | [gitlab-org/cli, docs/source/repo/view.md](https://gitlab.com/gitlab-org/cli/-/raw/main/docs/source/repo/view.md) |
+| 2 | `glab auth status` behaviour and exit codes (Section 6.1) | **Partly resolved.** Description "View authentication status"; checks the current-context instance (from `git remote`, `GITLAB_HOST`, or config) by default; flags `-a, --all`, `--hostname string` (no `-h` short form — `-h` is help, which corrected an error in the earlier text), `-t, --show-token` ("Display the authentication token"). **Exit codes are not documented** on the page, nor is the exact field list printed. Section 6.1 now says so and tells the operator to confirm the exit code once with a bogus `GITLAB_TOKEN` before relying on it in `repo_sync_preflight`. | [gitlab-org/cli, docs/source/auth/status.md](https://gitlab.com/gitlab-org/cli/-/raw/main/docs/source/auth/status.md) |
+
+Still unverified after this pass: the exit code of `glab auth status` on a rejected token (not in the docs; needs a local run), and the JSON key names emitted by `glab repo view -F json` (needs a local run).
+
+### Local verification on the target machine (2026-09-07)
+
+Run on the user's Mac (Darwin 25.6, `git 2.50.1 (Apple Git-155)`, `zsh 5.9`, `glab 1.112.0`, `gh` present, `gitup` absent). These are observations from the shell, not documentation quotes, so they settle the "needs a local run" items above for this machine only.
+
+| Item | Observation |
+|---|---|
+| `git fetch --atomic --porcelain` | Accepted by the installed git (`--dry-run` exit 0), so no minimum-version concern here (Section 1). |
+| `git stash push` on a clean tree | Prints nothing to stdout, exits **0**, stash list unchanged (Section 3 "observed behaviour" now confirmed locally). |
+| `refs/remotes/origin/HEAD` | Present in this clone (`refs/remotes/origin/main`); existence must still be checked per repo (Section 2). |
+| zsh `wait -n` | **Unsupported** in zsh 5.9: `zsh:wait:1: job not found: -n`, exit 127. Do not depend on it (Section 4). |
+| `zsystem flock` | Available after `zmodload zsh/system` (Section 5). |
+| `flock(1)` / `shlock(1)` / `mv -h` | `flock` not installed; `/usr/bin/shlock` present; `mv` usage line shows `-h` (Section 5). |
+| `/etc/zprofile` | Lines 10-11 call `/usr/libexec/path_helper -s`, confirming the `zsh -f`/non-login PATH caveat (Section 4.6). |
+| `glab repo view -F json` | Emits the GitLab Projects API object; the key **`default_branch`** is present (`glab repo view gitlab-org/cli -F json` → `main`), so `--jq .default_branch` is correct (Section 2.4). |
+| `glab auth status` exit code | Exits **1** when any configured host fails (`--all` with one host returning 401 → exit 1 even though the other host is logged in), and exits 1 with `GITLAB_TOKEN=bogus`. Consequence: a stale token for an unrelated host makes the pre-flight fail; scope pre-flight with `--hostname` (Section 6.1). |
+| `glab repo list` | `-F json`, `--jq`, `-G/--include-subgroups` (default false), `-P/--per-page` default **30**, `-p/--page` — matches Section 6.3. |
+| `glab auth git-credential` | Exists; `--help` documents no flags beyond `-h`, so the helper line remains `credential.helper = !glab auth git-credential` by analogy with `gh`, unconfirmed by glab docs. |
