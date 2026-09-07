@@ -60,6 +60,9 @@ Located in `research/`. Design docs and fit assessments.
 
 - `agent-memory-dev/` — Evaluation of Claude agent persistent memory for cross-session context
 - `agent-memory-cross-profile/` — Architecture for cross-profile agent memory sharing
+- `cross-profile-bridges/` — Alternative bridges for cross-profile agent messaging
+- `reading-cognition-formatting/` — Readability and visual-comprehension rules behind the ghostwriter agent
+- `multi-repo-branch-sync/` — Keeping main/master/release branches fresh across many repos for agent-driven code exploration
 
 ### 🔌 Plugins
 
@@ -124,9 +127,14 @@ my-agents/
 │   │   ├── profile.md
 │   │   ├── fit-assessment.md
 │   │   └── synthesis.md
-│   └── agent-memory-cross-profile/
-│       ├── cross-agent-plugins.md
-│       └── cross-profile-architecture.md
+│   ├── agent-memory-cross-profile/
+│   ├── cross-profile-bridges/
+│   ├── reading-cognition-formatting/
+│   └── multi-repo-branch-sync/
+│       ├── existing-cli-tools.md
+│       ├── wrapper-over-git.md
+│       ├── remote-and-agent-facing.md
+│       └── synthesis.md
 │
 ├── plugins/                           # Marketplace distribution
 │   └── anima/
