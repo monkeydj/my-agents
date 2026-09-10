@@ -360,6 +360,7 @@ flat text extraction — trust the UI, not the response body.
 |---|---|---|
 | `+` signs | Silently stripped | Spell out: "and", "with", "or above" |
 | Underscores in identifiers (`get_eligible_orgs`) | Parsed as italic (`get*eligible*orgs`) | Avoid underscored identifiers in bold/italic contexts, or accept minor glitch |
+| Colon emoji shortcodes with underscores (`:triangular_flag_on_post:`) | Same italic-parsing hits the shortcode, breaking it into literal broken text instead of rendering the emoji | Use the literal emoji character (🚩) instead of a shortcode |
 | Markdown tables | Work but finicky | Prefer bold labels with dash-separated lines over pipe tables |
 | Backticks inside table cells | Unreliable | Use plain text in table cells |
 
@@ -376,12 +377,15 @@ tables:
 
 This converts cleanly to Jira headings and bold text.
 
-**Progress-summary template** — for a round-up covering multiple independent
-work units (several MRs, several fixes), a table reads better than dash-list
-labels because each unit has multiple named sub-changes sharing the same
-shape (this satisfies the "genuinely comparative" bar for tables, same rule
-as Confluence's). Use step labels above for a single linear phase/checklist;
-use this for a round-up of distinct units:
+**Label / Details table** — a two-column table (label + elaboration) reads
+better than dash-list labels whenever content is a parallel enumeration
+sharing the same shape: a round-up of independent work units, a list of
+risks, a list of findings (this satisfies the "genuinely comparative" bar
+for tables, same rule as Confluence's — it isn't limited to progress
+round-ups). Use step labels above for a single linear phase/checklist; use
+this table shape for any round-up of distinct, parallel items. Progress
+round-up shown first below; the risk/gap flag template further down reuses
+the same table shape for a different purpose.
 
 ```
 ## [emoji] Progress summary
@@ -402,12 +406,47 @@ Pick the header emoji to match the unit's nature (package/feature, config/
 hardening, bugfix, security) — a real scanning anchor for 3+ distinct units,
 not decoration for its own sake. Never restate a sub-header as a bullet
 immediately below it — same restatement ban as the Confluence table rule
-above, pick the header or the row, not both saying the same thing.
+above, pick the header or the row, not both saying the same thing. The same
+ban applies inside a single row: the Details cell must say something the
+label didn't, not restate the label's sentence with one clause tacked on —
+a row with nothing to add doesn't need a Details cell, drop it to a
+single-column list instead.
 
 The backticks-in-table-cells pitfall above still applies and is unverified
 for this exact shape through this tool's markdown→ADF conversion — if
 backticked identifiers inside a cell render oddly, fall back to the bold-label
 list format instead.
+
+**Risk / gap flag template** — for surfacing a risk, blocker, or open
+technical question discovered mid-work; Jira's version of Slack's Raising
+Concerns / Blockers template. Reuses the Label / Details table shape above:
+
+```
+## (!) [short risk title]
+
+### [emoji] Background
+
+[prose: what triggers the risk, where it applies and where it doesn't, current scope]
+
+### 🚩 Risks
+
+|Risk|Why it matters|
+|---|---|
+|[short label]|[new consequence — not the label restated]|
+
+### 🔍 Current findings
+
+|Finding|Details|
+|---|---|
+|[short label]|[new specifics — not the label restated]|
+```
+
+Drop any ticket self-link under the heading — linking a ticket to itself
+inside its own comment adds no navigation value and restates the heading
+directly above it. Only add a linked reference line, or the ticket key in
+the heading itself, when the risk was discovered against a *different*
+ticket than the one being commented on — then the link tells the reader
+where the risk actually came from.
 
 **Status updates:** keep the ticket description as the stable spec. Use
 comments for living progress — phase status, step completion, blockers.
