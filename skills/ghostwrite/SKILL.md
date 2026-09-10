@@ -1,5 +1,5 @@
 ---
-description: Draft Slack messages, team updates, Confluence announcements, Jira comments, and MR descriptions in the user's natural voice. Trigger on "draft a message", "write a Slack message", "announce this", "craft a message for", or any request to write comms on the user's behalf.
+description: Draft Slack messages, team updates, Confluence announcements, Jira comments, MR descriptions, and MR/PR review-comment replies in the user's natural voice. Trigger on "draft a message", "write a Slack message", "announce this", "craft a message for", "reply to this comment/review", or any request to generate written communication — a message, reply, paragraph, or document — on the user's behalf.
 ---
 
 # ghostwrite
