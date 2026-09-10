@@ -376,6 +376,39 @@ tables:
 
 This converts cleanly to Jira headings and bold text.
 
+**Progress-summary template** — for a round-up covering multiple independent
+work units (several MRs, several fixes), a table reads better than dash-list
+labels because each unit has multiple named sub-changes sharing the same
+shape (this satisfies the "genuinely comparative" bar for tables, same rule
+as Confluence's). Use step labels above for a single linear phase/checklist;
+use this for a round-up of distinct units:
+
+```
+## [emoji] Progress summary
+
+[one sentence: count + what landed]
+
+### [emoji] MR !1234 (merged `YYYY-MM-DD`) — short descriptive title
+
+|Change|Details|
+|---|---|
+|[short label]|[elaboration — why/specifics, backticked identifiers OK]|
+|[short label]|[elaboration]|
+
+[one closing sentence: what's landed vs. what's still open]
+```
+
+Pick the header emoji to match the unit's nature (package/feature, config/
+hardening, bugfix, security) — a real scanning anchor for 3+ distinct units,
+not decoration for its own sake. Never restate a sub-header as a bullet
+immediately below it — same restatement ban as the Confluence table rule
+above, pick the header or the row, not both saying the same thing.
+
+The backticks-in-table-cells pitfall above still applies and is unverified
+for this exact shape through this tool's markdown→ADF conversion — if
+backticked identifiers inside a cell render oddly, fall back to the bold-label
+list format instead.
+
 **Status updates:** keep the ticket description as the stable spec. Use
 comments for living progress — phase status, step completion, blockers.
 Each progress update is a new comment or edit of a pinned progress comment.
