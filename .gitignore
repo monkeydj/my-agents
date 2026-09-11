@@ -1,9 +1,16 @@
+# macOS
 .DS_Store
 
+# ignore local configs of agent
+.agents/
 .claude/
+.opencode/
+.pi/
+
+# unwanted directories
+static/
+*workspace/
+
+# deprecated, but keep for consistency
 .omc/
 .serena/
-
-static/
-
-*workspace/
