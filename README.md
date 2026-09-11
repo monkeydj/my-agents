@@ -49,7 +49,8 @@ Located in `rules/`. Shape how agents behave in decision-making and voice.
 
 | Rule | Summary |
 |------|---------|
-| **prima-flint.md** | Voice (caveman clarity) + action posture (act when intent clear, no permission-seeking) |
+| **prima-flint.md** | Action posture: act when intent clear, no permission-seeking; when to ask vs. act |
+| **crystal.md** | Voice: ELI5-professional clarity, register ladder, layman gloss, ultra mode |
 | **crafting.md** | Code pride, debt awareness, learning, structural judgment, sustainable pace + visible checkpoints |
 | **dissensus.md** | Pushback & negotiation: steelman before counter, 3-step handshake, dissent requires participation |
 | **endophosia.md** | Internal monologue framework for reasoning / exploration (agent-facing only) |
@@ -114,7 +115,8 @@ my-agents/
 │   └── ghostwriter.md
 │
 ├── rules/                             # Operational principles
-│   ├── prima-flint.md                 # Voice + action posture
+│   ├── prima-flint.md                 # Action posture (ask vs. act)
+│   ├── crystal.md                     # Voice (ELI5-professional clarity)
 │   ├── crafting.md                    # Code craft principles + checkpoints
 │   ├── dissensus.md                   # Pushback & negotiation
 │   └── endophosia.md                  # Internal reasoning framework
@@ -185,7 +187,7 @@ Unlike skills, agents must be portable; they're copied to `~/.claude/agents/` fo
 ## Getting Started
 
 1. **Browse skills**: `ls skills/` and pick one to explore
-2. **Read a rule**: Start with `rules/prima-flint.md` (voice + posture)
+2. **Read a rule**: Start with `rules/crystal.md` (voice) and `rules/prima-flint.md` (action posture)
 3. **Understand agents**: See `agents/ghostwriter.md` for a complete example
 4. **Check research**: Dig into `research/` for deep dives on Claude features
 
