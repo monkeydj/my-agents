@@ -6,5 +6,6 @@ Point-in-time snapshots of the principle files each rule in `rules/` links to vi
 - `dissensus.md` → [[diverge-before-converge]], [[team-diversity]]
 - `crafting.md` → [[solve-right-problem-first]]
 - `prima-flint.md` → [[user-centered-design]], [[natural-decision-gates]]
+- `crystal.md` → [[user-centered-design]]
 
 Source of truth is the KBS repo (`KBS.feat-principles-n-methodologies/principles/`). These copies exist so the mapping is readable without that repo checked out — they will drift if the source changes; re-sync manually if the KBS principles get revised.
