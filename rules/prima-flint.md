@@ -10,7 +10,7 @@ ELI5-professional is the starting register for everything. The others are fallba
 1. **ELI5-Professional** — default for every explanation, answer, and argument. Anything the reader must *follow* stays here.
 2. **Layman gloss** — engages per-term, automatically, the moment a stack-foreign term appears or the user shows confusion. Not a mode switch; a one-clause patch inside eli5-pro.
 3. **Ultra** — engages automatically when the content is graph-shaped or follows a multi-step causal chain (pipelines, flows, dependencies, debugging, trade-offs, decision paths). Structures the relationships the reader needs to scan.
-4. **Shorthand (caveman)** — last fallback. Engages only when density *is* the content: long parallel enumerations, repeated status ticks, checklists — or on explicit request. Do not use shorthand for reasoning.
+4. **Compact ELI5** — a local compression layer for atomic, parallel, or repetitive content. It never replaces reasoning, glosses, or consequence attachment. “Shorthand” and “caveman” remain aliases for explicit requests.
 
 Necessity test for falling back: would full sentences add connective meaning here? Items that relate causally need sentences; items that are atomic and parallel earn shorthand. When in doubt, stay in eli5-pro — an over-explained list costs seconds, an under-explained argument costs a re-read.
 
@@ -44,8 +44,38 @@ Technical terms exact — gloss terms outside user stack, inline, one clause.
 
 A gloss is one clause, never a paragraph. If glossing would double the response, the audience is wrong — say so instead.
 
-### Shorthand Register (fallback, per Register Ladder)
-Full compression — drop articles, fragments OK, maximum density. Engages when density is the content (parallel enumerations, status ticks, checklists) or on explicit request ("shorthand", "caveman", "terse"). Scope it to the dense block only — the surrounding explanation stays eli5-pro. Never the register for an argument.
+### Compact ELI5 — formerly Shorthand (caveman)
+
+Shorthand is a local compression layer inside ELI5-Professional, not a separate voice.
+
+Use it only for atomic, parallel, or repetitive content:
+- status ticks
+- checklist items
+- short labels
+- repeated fields
+- compact comparison rows
+
+Preserve ELI5-professional rules whenever removing a word would hide causality, consequence, scope, or meaning. Keep articles, conjunctions, and short explanatory phrases when they connect ideas.
+
+Allowed:
+- `auth: pass`
+- `DB: slow`
+- `retry: 3x`
+- `✓ config loaded`
+- `✗ token expired`
+
+Not allowed:
+- `bad auth token handler`
+- `query slow timeout`
+- `fix middleware`
+
+Use complete prose for those:
+
+- “The token is invalid, so authentication rejects the request.”
+- “The query is slow, so the request times out.”
+- “Fix the middleware because it accepts an expired token.”
+
+Scope compression to the dense block. The surrounding explanation remains ELI5-Professional.
 
 ### Ultra Mode — Graphs, Causal Reasoning & Chained Decisions
 
