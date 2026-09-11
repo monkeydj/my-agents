@@ -3,7 +3,7 @@
 #
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
-# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); "??" when cache absent/unreadable
+# 💰 Gold = 7-day rate-limit budget remaining; 󰑐 = reset in; ??% when absent, never faked full
 # 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
@@ -154,38 +154,31 @@ if [ -n "$five_reset" ]; then
     mp_reset_str="$(human_duration $(( five_reset - now )))"
 fi
 
-# 💸 real tokens used in the last 7 days, summed from the stats cache (dailyModelTokens).
-# Falls back to the live 7-day rate-limit used-percentage from the statusline contract
-# when the cache is stale/absent (Claude Code's stats recompute has known freeze bugs).
-# Never a fabricated number — always one of: real count, live %, or ??.
-week_known=0
-week_rate_limited=0
-week_used_label="??"
-stats_file="$CLAUDE_DIR/stats-cache.json"
-if [ -f "$stats_file" ]; then
-    week_tokens="$(jq -r '
-        (now - 6*86400 | gmtime | strftime("%Y-%m-%d")) as $cut
-        | [ .dailyModelTokens[]?
-            | select(.date >= $cut)
-            | .tokensByModel // {} | to_entries[] | .value ]
-        | if length == 0 then "empty" else add // 0 end
-    ' "$stats_file" 2>/dev/null || echo "")"
-    case "$week_tokens" in
-        ''|empty|*[!0-9]*) : ;;
-        *) week_used_label="$(format_tokens "$week_tokens")"; week_known=1 ;;
-    esac
-fi
-# Fallback: live rate-limit percentage from the statusline contract.
-if [ "$week_known" -eq 0 ] && [ -n "$seven_used_in" ]; then
-    week_used_pct="$(printf '%.0f' "$seven_used_in" 2>/dev/null || echo "")"
-    if [ -n "$week_used_pct" ]; then
-        week_used_label="ⓢ${week_used_pct}%"
-        week_known=1
-        week_rate_limited=1
+# ----- Gold: 7-day rate-limit budget remaining ----------------------------
+# From .rate_limits.seven_day. Absent → mark unknown, never fake a full bar.
+seven_used="$seven_used_in"
+seven_reset="$seven_reset_in"
+gold_known=1
+gold_pct=0
+if [ -n "$seven_used" ]; then
+    seven_used_int="$(printf '%.0f' "$seven_used" 2>/dev/null || echo "")"
+    if [ -n "$seven_used_int" ]; then
+        gold_pct=$(( 100 - seven_used_int ))
+        [ "$gold_pct" -lt 0 ] && gold_pct=0
+        [ "$gold_pct" -gt 100 ] && gold_pct=100
+    else
+        gold_known=0
     fi
+else
+    gold_known=0
 fi
 
-# Skip weekly reset countdown — 7-day piece focuses on insight, not cadence.
+# Gold reset countdown to the next 7-day reset.
+gold_reset_str=""
+if [ -n "$seven_reset" ]; then
+    now="$(date +%s)"
+    gold_reset_str="$(human_duration $(( seven_reset - now )))"
+fi
 
 # ----- Bar renderer -------------------------------------------------------
 # render_bar <pct> <filled_color> : prints "[████░░░░░░]"
@@ -217,9 +210,9 @@ mp_color="$BLUE"
 [ "$mp_pct" -lt 30 ] && mp_color="$PURPLE"
 [ "$mp_known" -eq 0 ] && mp_color="$GREY"
 
-# Weekly usage is real measured tokens → gold; grey ?? when the cache is unavailable.
-cost_color="$GOLD"
-[ "$week_known" -eq 0 ] && cost_color="$GREY"
+# Gold: 7-day budget color (green high → red low).
+gold_color="$(health_color "$gold_pct")"
+[ "$gold_known" -eq 0 ] && gold_color="$GREY"
 
 # Low-HP warning glyph
 hp_icon="❤️ "
@@ -333,10 +326,15 @@ else
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
-if [ "$week_rate_limited" -eq 1 ]; then
-    printf '%s💸 %s%s' "$DIM" "$week_used_label" "$RESET"
+if [ "$gold_known" -eq 1 ]; then
+    printf '%s💰 %sGold%s %s %s%d%%%s' \
+        "$GOLD" "$BOLD" "$RESET" \
+        "$(render_bar "$gold_pct" "$gold_color")" "$gold_color" "$gold_pct" "$RESET"
+    [ -n "$gold_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$gold_reset_str" "$RESET"
 else
-    printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
+    printf '%s💰 %sGold%s %s %s??%%%s' \
+        "$GOLD" "$BOLD" "$RESET" \
+        "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 [ -n "$py" ]   && printf '%s%s' "$SEP" && printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"
 [ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s🕷️ %s%s' "$M_MOSS" "$node" "$RESET"
