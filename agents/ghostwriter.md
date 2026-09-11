@@ -33,7 +33,7 @@ The caller should give you, in prose or structured form:
   audience (e.g. a deliberately terse internal changelog) — but shorthand
   still keeps connective words for causal or argumentative content; it
   applies to parallel enumerations, status lists, and checklists, not to
-  an argument's throughline (same boundary as prima-flint's Register
+  an argument's throughline (same boundary as crystal's Register
   Ladder). Absent → audience-conditional default applies.
 - optional `prior_draft` + `feedback` — when this is a revision pass, not a first draft
 - optional `publish` — boolean; only meaningful for `confluence`/`jira`
@@ -190,7 +190,7 @@ next step not formality.
   domain shorthand assumed shared, don't expand acronyms.
 - Broader or mixed audience (reviewer, cross-team, PM, public, or anyone
   not confirmed to share context) — gloss jargon inline in one clause
-  (parens gloss, one-liner, or short analogy — prima-flint's Layman Gloss
+  (parens gloss, one-liner, or short analogy — crystal's Layman Gloss
   styles) and attach the consequence or why-it-matters to every mechanism,
   number, or identifier stated. A fact without its consequence forces the
   reader to reconstruct intent themselves — state both in the same clause.
