@@ -301,12 +301,8 @@ py="" ; node=""
 command -v python3 >/dev/null 2>&1 && py="$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2 || true)"
 command -v node >/dev/null 2>&1 && node="$(node --version 2>&1 | sed 's/^v//' | cut -d. -f1,2 || true)"
 
-# Official Seti Python logo glyph (U+E606, needs a Nerd Font); 🐍 via STATUSLINE_NF=0.
-if [ "${STATUSLINE_NF:-1}" = "1" ]; then
-    PY_ICON=$'\xEE\x98\x86'   # U+E606 Seti python (UTF-8; bash 3.2-safe)
-else
-    PY_ICON="🐍"
-fi
+# RPG monster icon (snake), matching Node's unconditional emoji approach.
+PY_ICON="🐍"
 
 # ----- Line 1: vitals — lines-changed → HP → MP → cost → langs ---------
 printf '%s⚔️ +%s%s%s/%s-%s%s' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
