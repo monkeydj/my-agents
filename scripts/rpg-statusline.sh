@@ -3,7 +3,7 @@
 #
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
-# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); 󰑐 = 7-day rate-limit reset; "??" when cache absent/unreadable
+# 💸 Coin = real tokens used last 7 days, summed from stats-cache.json (dailyModelTokens); "??" when cache absent/unreadable
 # 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
@@ -185,12 +185,7 @@ if [ "$week_known" -eq 0 ] && [ -n "$seven_used_in" ]; then
     fi
 fi
 
-# Weekly rate-limit reset countdown (independent of the token source above).
-week_reset_str=""
-if [ -n "$seven_reset_in" ]; then
-    now="$(date +%s)"
-    week_reset_str="$(human_duration $(( seven_reset_in - now )))"
-fi
+# Skip weekly reset countdown — 7-day piece focuses on insight, not cadence.
 
 # ----- Bar renderer -------------------------------------------------------
 # render_bar <pct> <filled_color> : prints "[████░░░░░░]"
@@ -343,9 +338,8 @@ if [ "$week_rate_limited" -eq 1 ]; then
 else
     printf '%s💸 %s%s' "$cost_color" "$week_used_label" "$RESET"
 fi
-[ -n "$week_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$week_reset_str" "$RESET"
 [ -n "$py" ]   && printf '%s%s' "$SEP" && printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"
-[ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s⬢ %s%s' "$M_MOSS" "$node" "$RESET"
+[ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s🕷️ %s%s' "$M_MOSS" "$node" "$RESET"
 printf '\n'
 
 # ----- Line 2: context — class → dir → git-tokens → branch -----------------
