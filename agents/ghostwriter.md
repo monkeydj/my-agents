@@ -363,9 +363,12 @@ sharing the same shape: a round-up of independent work units, a list of
 risks, a list of findings (this satisfies the "genuinely comparative" bar
 for tables, same rule as Confluence's — it isn't limited to progress
 round-ups). Use step labels above for a single linear phase/checklist; use
-this table shape for any round-up of distinct, parallel items. Progress
-round-up shown first below; the risk/gap flag template further down reuses
-the same table shape for a different purpose.
+this table shape only when every item is genuinely short and parallel — a
+one-clause label plus a one-clause consequence, nothing that needs "so" or
+"because" to connect them. Progress round-up shown first below; the
+risk/gap flag template further down defaults to bullets instead, reserving
+this table shape for the rare case where a risk/finding really is that
+short.
 
 ```
 ## [emoji] Progress summary
@@ -397,9 +400,30 @@ underscored identifiers specifically (see Known conversion pitfalls below) —
 if a cell needs an identifier with an underscore, spell it out in plain
 English or fall back to the bold-label list format instead of a table.
 
+**Single-unit progress status** — when there's exactly one MR/unit to
+report, not a round-up of several, skip the per-unit Change/Details table
+above and organize by theme instead. Each theme gets its own `###`
+sub-header and prose underneath; a theme only becomes a table if its own
+content is short and parallel (e.g. a coverage-by-dataset breakdown).
+Reusable theme labels: **Data coverage verified** (lead each number with the
+rounded percentage, then the exact count in parens — "96% of assessment
+rows populated (3,297 of 3,431)"), **Review findings** (what review caught
+and whether it's resolved — state plainly if nothing else is open),
+**Scope** (what's included/excluded and why, especially a deliberate
+exclusion someone might otherwise assume is a gap), **Technical detail and
+links** (point to the MR description or a linked plan doc for full detail
+instead of duplicating it in the comment). Call out anything easy to miss —
+a required manual step, a deploy trigger, a known deferral — as its own
+short paragraph led with a bold **IMPORTANT** or similar, not buried inside
+a table row where a skimming reader won't stop on it.
+
 **Risk / gap flag template** — for surfacing a risk, blocker, or open
 technical question discovered mid-work; Jira's version of Slack's Raising
-Concerns / Blockers template. Reuses the Label / Details table shape above:
+Concerns / Blockers template. Default to bullets for Risks and Current
+findings, not the Label / Details table above — each item usually needs a
+full causal sentence ("X, so Y", "if X then Y"), which a two-column table
+strips down to a label plus one clause. Fall back to the table shape only
+if every risk/finding really is that short:
 
 ```
 ## (!) [short risk title]
@@ -410,15 +434,19 @@ Concerns / Blockers template. Reuses the Label / Details table shape above:
 
 ### 🚩 Risks
 
-|Risk|Why it matters|
-|---|---|
-|[short label]|[new consequence — not the label restated]|
+- [full sentence: the risk and its consequence, connective words intact]
+- [full sentence: another risk]
 
 ### 🔍 Current findings
 
-|Finding|Details|
-|---|---|
-|[short label]|[new specifics — not the label restated]|
+- [full sentence: what's confirmed, measured, or still open]
+- [full sentence: another finding]
+
+### 💡 Example (optional)
+
+[numbered walkthrough, 3-5 concrete steps, making an abstract risk tangible
+by tracing one specific scenario through to its consequence — use when
+prose alone leaves the risk too abstract to land]
 ```
 
 Drop any ticket self-link under the heading — linking a ticket to itself
@@ -454,7 +482,14 @@ Each progress update is a new comment or edit of a pinned progress comment.
   per-word: an unpaired underscore from one identifier can consume part of a
   later, individually-safe-looking single-underscore word elsewhere in the
   same comment.
-- Underscores inside a URL are the one exception and survive untouched.
+- Underscores inside a bare, unwrapped URL are the one reported exception
+  and survive untouched — **but this is unconfirmed for every form**: one
+  production comment shows a URL wrapped in `[url](url)` markdown-link
+  syntax, repeating the URL as its own link text, with the underscore still
+  mangled (`merge_requests` → `merge*requests`) in the persisted comment.
+  Whether the link-wrapper or the text-repeats-the-href pattern caused it is
+  untested. Until confirmed either way, prefer a bare auto-linked URL over
+  `[text](url)` when the path contains an underscore.
 - Fix: describe the identifier in plain English ("the improvement areas
   dataset" instead of `assessment_improvement_areas`), or if it must appear
   literally, put it inside a URL (e.g. a deep link to the file/line) rather
