@@ -351,8 +351,11 @@ to expected content length.
 ### Jira
 
 The MCP `jira_add_comment` / `jira_edit_comment` tools accept markdown and
-convert it to Jira's internal format (ADF). The API response body shows
-flat text extraction — trust the UI, not the response body.
+convert it to Jira's internal format (ADF). The write/edit response echoes a
+`body` that is not reliable evidence of what actually rendered — it has
+misreported in both directions (showing corruption that isn't there, and
+missing corruption that is). Always confirm with `jira_get_issue` after
+writing, never from the write/edit response.
 
 **Label / Details table** — a two-column table (label + elaboration) reads
 better than dash-list labels whenever content is a parallel enumeration
@@ -373,7 +376,7 @@ the same table shape for a different purpose.
 
 |Change|Details|
 |---|---|
-|[short label]|[elaboration — why/specifics, backticked identifiers OK]|
+|[short label]|[elaboration — why/specifics; avoid underscored identifiers in cells, see Known conversion pitfalls below]|
 |[short label]|[elaboration]|
 
 [one closing sentence: what's landed vs. what's still open]
@@ -389,10 +392,10 @@ label didn't, not restate the label's sentence with one clause tacked on —
 a row with nothing to add doesn't need a Details cell, drop it to a
 single-column list instead.
 
-The backticks-in-table-cells pitfall above still applies and is unverified
-for this exact shape through this tool's markdown→ADF conversion — if
-backticked identifiers inside a cell render oddly, fall back to the bold-label
-list format instead.
+The backticks-in-table-cells pitfall above applies here too, and is worse for
+underscored identifiers specifically (see Known conversion pitfalls below) —
+if a cell needs an identifier with an underscore, spell it out in plain
+English or fall back to the bold-label list format instead of a table.
 
 **Risk / gap flag template** — for surfacing a risk, blocker, or open
 technical question discovered mid-work; Jira's version of Slack's Raising
@@ -434,10 +437,39 @@ Each progress update is a new comment or edit of a pinned progress comment.
 | Input | Actual Rendering | Workaround |
 |---|---|---|
 | `+` signs | Silently stripped | Spell out: "and", "with", "or above" |
-| Underscores in identifiers (`get_eligible_orgs`) | Parsed as italic (`get*eligible*orgs`) | Avoid underscored identifiers in bold/italic contexts, or accept minor glitch |
-| Colon emoji shortcodes with underscores (`:triangular_flag_on_post:`) | Same italic-parsing hits the shortcode, breaking it into literal broken text instead of rendering the emoji | Use the literal emoji character (🚩) instead of a shortcode |
-| Markdown tables | Work but finicky | Prefer bold labels with dash-separated lines over pipe tables |
+| Underscored identifiers (`get_eligible_orgs`) | Mangled; backticks and backslash-escapes do not protect them | Describe the identifier in plain English, or link out to it — see below |
+| Colon emoji shortcodes with underscores (`:triangular_flag_on_post:`) | Same underscore-mangling hits the shortcode, breaking it into literal broken text instead of rendering the emoji | Use the literal emoji character (🚩) instead of a shortcode |
+| Markdown tables | Work but finicky, and mangle underscored identifiers in cells worse than prose | Prefer bold labels with dash-separated lines over pipe tables; never put an underscored identifier in a table cell |
 | Backticks inside table cells | Unreliable | Use plain text in table cells |
+| `[~accountid:X]` mention syntax | Does not notify and does not render as a mention — stores as literal text `User:<accountid>` | Call `jira_add_watcher(issue_key, account_id)` to notify; write the person's plain name in the comment text since it won't link either way |
+
+**Underscored identifiers have no reliable escape:**
+- Backtick-wrapping (`` `Business_Unit_Categories` ``) still mangles the
+  underscores inside the backticks, and replaces the backticks themselves
+  with literal newlines, breaking paragraph structure.
+- Backslash-escaping (`Business\_Unit\_Categories`) leaves the backslash as a
+  visible literal character and still mangles the underscores — worse than
+  doing nothing.
+- Mangling pairs underscores globally across the whole comment body, not
+  per-word: an unpaired underscore from one identifier can consume part of a
+  later, individually-safe-looking single-underscore word elsewhere in the
+  same comment.
+- Underscores inside a URL are the one exception and survive untouched.
+- Fix: describe the identifier in plain English ("the improvement areas
+  dataset" instead of `assessment_improvement_areas`), or if it must appear
+  literally, put it inside a URL (e.g. a deep link to the file/line) rather
+  than bare or backticked text.
+
+**Description field writes** (`jira_update_issue`, not currently in this
+agent's toolset): `**bold**` renders as literal `\*\*bold\*\*`; curly braces
+mangle even inside backticks (`{org}` → `{org }`); a leading `~` is dropped
+(`~140 lines` → `140 lines`, turning an estimate into false precision); bare
+issue-key-shaped tokens auto-link even without a matching issue. Survives:
+`####` sub-headings, backticked code spans, numbered lists, real issue-key
+links. Fix: use `####` instead of bold, backtick every identifier, replace
+`{placeholder}` with bare caps (`ss_ORG`), spell out approximations instead
+of `~`, backtick issue-key-shaped tokens, and confirm with `jira_get_issue`
+after writing.
 
 ### MR (Merge Request) Description
 
