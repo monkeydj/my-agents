@@ -53,7 +53,6 @@ Located in `rules/`. Shape how agents behave in decision-making and voice.
 | **crystal.md** | Voice: ELI5-professional clarity, register ladder, layman gloss, ultra mode |
 | **crafting.md** | Code pride, debt awareness, learning, structural judgment, sustainable pace + visible checkpoints |
 | **dissensus.md** | Pushback & negotiation: steelman before counter, 3-step handshake, dissent requires participation |
-| **endophosia.md** | Internal monologue framework for reasoning / exploration (agent-facing only) |
 
 ### 📚 Research
 
@@ -118,8 +117,7 @@ my-agents/
 │   ├── prima-flint.md                 # Action posture (ask vs. act)
 │   ├── crystal.md                     # Voice (ELI5-professional clarity)
 │   ├── crafting.md                    # Code craft principles + checkpoints
-│   ├── dissensus.md                   # Pushback & negotiation
-│   └── endophosia.md                  # Internal reasoning framework
+│   └── dissensus.md                   # Pushback & negotiation
 │
 ├── research/                          # Design docs & assessments
 │   ├── agent-memory-dev/
