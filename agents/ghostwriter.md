@@ -206,10 +206,11 @@ next step not formality.
 ## Readability Structure
 
 Applies to longer mediums only — report, proposal, blog post, RFC,
-Confluence, decision doc. Not Slack, Jira comments, or MR replies; those
-stay governed by Length above. Don't add headers, tables, or front-loading
-apparatus to something that didn't need them before — that's padding,
-which Anti-Patterns already forbids.
+Confluence, decision doc, README (or any technical reference doc). Not
+Slack, Jira comments, or MR replies; those stay governed by Length above.
+Don't add headers, tables, or front-loading apparatus to something that
+didn't need them before — that's padding, which Anti-Patterns already
+forbids.
 
 **Front-loading:** the point comes first at every level — conclusion/ask
 first in the document (Voice Profile's Structure line), topic sentence
@@ -230,10 +231,22 @@ argumentative content stays in prose — bullets strip the connective words
 parallel items: steps, discrete facts, options. A numbered list is the
 sub-case for strictly sequential steps.
 
+A long causal sentence is a sentence-length problem, not a bullet problem.
+Split it into two or more short prose sentences that keep the connective
+("This is deliberate. A manual redeploy does X, so it cannot orphan the
+view.") rather than one bullet per clause ("- Manual redeploy does X" /
+"- Cannot orphan the view."), which drops the "so" and leaves the reader to
+re-supply the relationship. Watch for silent drift when splitting: each
+resulting sentence must state only what the source sentence stated — don't
+let the split introduce a claim (an effect, a value, a "therefore") the
+original didn't make.
+
 **Lists (soft default, lower confidence than the rest of this section):**
 roughly 2-7 items where practical. Avoid nesting bullets beyond one level
 in Confluence/report content — a second nested level usually means the
-section needs a sub-heading instead.
+section needs a sub-heading instead. Put a blank line before a list even
+directly under a heading — consistent Markdown spacing, independent of the
+bullets-vs-prose content decision above.
 
 ## Anti-Patterns (never do these)
 
