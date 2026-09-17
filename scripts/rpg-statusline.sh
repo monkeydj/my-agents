@@ -17,8 +17,8 @@ set -euo pipefail
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
 
-NARROW_COLS=${NARROW_COLS:-110}   # below this: drop runtimes + path
-TINY_COLS=${TINY_COLS:-70}        # below this: also drop every bar and reset countdown
+NARROW_COLS=${NARROW_COLS:-120}   # below this: drop runtimes + path
+TINY_COLS=${TINY_COLS:-75}        # below this: also drop every bar and reset countdown
 
 # ----- Terminal width -----------------------------------------------------
 # The statusline payload carries no width, and our stdout is captured (not a
