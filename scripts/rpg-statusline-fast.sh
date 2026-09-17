@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # rpg-statusline-fast.sh — Retro RPG statusline for Claude Code (fork-optimized)
 #
-# Same rendering as rpg-statusline.sh, ~10 subprocesses per render instead of ~40:
+# Same rendering as rpg-statusline.sh with one deliberate exception — in a repo
+# with no commits yet this shows the real branch name (main) where the old
+# script showed "HEAD", because `status -b` names an unborn branch and
+# `rev-parse --abbrev-ref HEAD` does not.
+#
+# ~7 subprocesses per render instead of ~74 (156ms -> 52ms):
 #   • one jq call extracts every payload field (was 14 separate jq pipelines)
 #   • one `git status --porcelain -b` supplies branch, ahead/behind and file counts
 #     (was 5 git calls + 3 greps + 2 awks), counted in a pure-bash loop
@@ -100,7 +105,9 @@ printf '%s\n' "$input" >> /tmp/statusline.log 2>/dev/null || true
 # collapsing them the way a tab or newline delimiter would.
 fields="$(printf '%s' "$input" | jq -r '
     def s: if . == null then "" else tostring end;
-    def pct: if type == "number" then (round|tostring) else "" end;
+    # tonumber? also accepts a percentage sent as a JSON string ("37"), which
+    # the old printf %.0f path handled; non-numeric falls through to "".
+    def pct: (tonumber? // "") | if type == "number" then (round|tostring) else "" end;
     [ (.model.display_name // .model.id // "Adventurer")
     , (.model.id // "")
     , (.transcript_path // "")
