@@ -24,8 +24,9 @@ NARROW_COLS=${NARROW_COLS:-100}              # below this width, drop the option
 # from the tty device owned by the parent claude process. 0 = undetectable,
 # which keeps the full layout rather than guessing narrow.
 term_cols() {
-    local t
-    case "${COLUMNS:-0}" in ''|*[!0-9]*) : ;; *) if [ "$COLUMNS" -gt 0 ]; then printf '%s' "$COLUMNS"; return; fi ;; esac
+    local t c="${COLUMNS:-0}"
+    case "$c" in ''|*[!0-9]*) c=0 ;; esac
+    if [ "$c" -gt 0 ]; then printf '%s' "$c"; return; fi
     t="$(ps -o tty= -p "$PPID" 2>/dev/null | tr -d ' ')"
     case "$t" in ''|'??') printf '0'; return ;; esac
     stty -f "/dev/$t" size 2>/dev/null | awk '{print $2+0}' || printf '0'
