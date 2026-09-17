@@ -5,6 +5,7 @@
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
 # 💰 Gold = 7-day rate-limit budget remaining; 󰑐 = reset in; ??% when absent, never faked full
 # 🕯️🧨🔥💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 📏 Gates = NARROW_COLS (drop runtimes + path) and TINY_COLS (also drop bars + resets)
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
 # settings.json: "statusLine": { "type": "command", "command": "~/.claude/scripts/rpg-statusline.sh" }
@@ -16,7 +17,8 @@ set -euo pipefail
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
 
-NARROW_COLS=${NARROW_COLS:-100}              # below this width, drop the optional segments
+NARROW_COLS=${NARROW_COLS:-110}   # below this: drop runtimes + path
+TINY_COLS=${TINY_COLS:-70}        # below this: also drop every bar and reset countdown
 
 # ----- Terminal width -----------------------------------------------------
 # The statusline payload carries no width, and our stdout is captured (not a
@@ -34,7 +36,9 @@ term_cols() {
 cols="$(term_cols)"
 case "$cols" in ''|*[!0-9]*) cols=0 ;; esac
 narrow=0
+tiny=0
 if [ "$cols" -gt 0 ] && [ "$cols" -lt "$NARROW_COLS" ]; then narrow=1; fi
+if [ "$cols" -gt 0 ] && [ "$cols" -lt "$TINY_COLS" ]; then narrow=1; tiny=1; fi
 
 # ----- Resolve Claude config directory (once) -------------------------------
 # Expects <claude-dir>/scripts/rpg-statusline.sh so the grandparent is the
@@ -216,6 +220,13 @@ render_bar() {
     printf '%s[%s%s%s%s%s]%s' "$GREY" "$color" "$bar" "$DIM" "$e" "$RESET$GREY" "$RESET"
 }
 
+# bar <pct> <color> → the rendered bar plus one trailing space; nothing at all
+# when tiny, so the percentage sits straight after the label.
+bar() {
+    [ "$tiny" -eq 1 ] && return 0
+    printf '%s ' "$(render_bar "$1" "$2")"
+}
+
 # Health-style color: green high → red low.
 health_color() {
     local pct="$1"
@@ -327,30 +338,34 @@ PY_ICON="🐍"
 # ----- Line 1: vitals — lines-changed → HP → MP → cost → langs ---------
 printf '%s⚔️ +%s%s%s/%s-%s%s' "$GREEN" "$lines_added" "$RESET" "$GREY" "$RED" "$lines_removed" "$RESET"
 printf '%s' "$SEP"
-printf '%s%s%s%sHP%s %s %s%d%%%s' \
+printf '%s%s%s%sHP%s %s%s%d%%%s' \
     "$RED" "$hp_icon" "$RESET" "$BOLD" "$RESET" \
-    "$(render_bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
+    "$(bar "$hp_pct" "$hp_color")" "$hp_color" "$hp_pct" "$RESET"
 printf '%s' "$SEP"
 if [ "$mp_known" -eq 1 ]; then
-    printf '%s🔮 %sMP%s %s %s%d%%%s' \
+    printf '%s🔮 %sMP%s %s%s%d%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
-        "$(render_bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
-    [ -n "$mp_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$mp_reset_str" "$RESET"
+        "$(bar "$mp_pct" "$mp_color")" "$mp_color" "$mp_pct" "$RESET"
+    if [ "$tiny" -eq 0 ] && [ -n "$mp_reset_str" ]; then
+        printf ' %s󰑐%s%s' "$DIM" "$mp_reset_str" "$RESET"
+    fi
 else
-    printf '%s🔮 %sMP%s %s %s??%%%s' \
+    printf '%s🔮 %sMP%s %s%s??%%%s' \
         "$CYAN" "$BOLD" "$RESET" \
-        "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
+        "$(bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 printf '%s' "$SEP"
 if [ "$gold_known" -eq 1 ]; then
-    printf '%s💰 %sGold%s %s %s%d%%%s' \
+    printf '%s💰 %sGold%s %s%s%d%%%s' \
         "$GOLD" "$BOLD" "$RESET" \
-        "$(render_bar "$gold_pct" "$gold_color")" "$gold_color" "$gold_pct" "$RESET"
-    [ -n "$gold_reset_str" ] && printf ' %s󰑐%s%s' "$DIM" "$gold_reset_str" "$RESET"
+        "$(bar "$gold_pct" "$gold_color")" "$gold_color" "$gold_pct" "$RESET"
+    if [ "$tiny" -eq 0 ] && [ -n "$gold_reset_str" ]; then
+        printf ' %s󰑐%s%s' "$DIM" "$gold_reset_str" "$RESET"
+    fi
 else
-    printf '%s💰 %sGold%s %s %s??%%%s' \
+    printf '%s💰 %sGold%s %s%s??%%%s' \
         "$GOLD" "$BOLD" "$RESET" \
-        "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
+        "$(bar 0 "$GREY")" "$GREY" "$RESET"
 fi
 if [ "$narrow" -eq 0 ]; then
     if [ -n "$py" ];   then printf '%s' "$SEP"; printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"; fi
@@ -412,11 +427,15 @@ case "$effort_tier" in
     max)    effort_n=5; effort_icon="🌋"; effort_color="$GOLD" ;;
 esac
 if [ "$effort_n" -gt 0 ]; then
-    ebar=""
-    for (( i=1; i<=5; i++ )); do
-        if [ "$i" -le "$effort_n" ]; then ebar+="${effort_color}▮"; else ebar+="${DIM}▯"; fi
-    done
-    effort_buff="$(printf '%s%s%sE%d%s %s%s' "$effort_color" "$effort_icon" "$BOLD" "$effort_n" "$RESET" "$ebar" "$RESET")"
+    if [ "$tiny" -eq 1 ]; then
+        effort_buff="$(printf '%s%s%sE%d%s' "$effort_color" "$effort_icon" "$BOLD" "$effort_n" "$RESET")"
+    else
+        ebar=""
+        for (( i=1; i<=5; i++ )); do
+            if [ "$i" -le "$effort_n" ]; then ebar+="${effort_color}▮"; else ebar+="${DIM}▯"; fi
+        done
+        effort_buff="$(printf '%s%s%sE%d%s %s%s' "$effort_color" "$effort_icon" "$BOLD" "$effort_n" "$RESET" "$ebar" "$RESET")"
+    fi
 fi
 
 segs=()
