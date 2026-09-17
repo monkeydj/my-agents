@@ -4,7 +4,7 @@
 # ❤️  HP   = context window remaining (.context_window; transcript fallback)
 # 🔮 MP   = 5h rate-limit budget left (.rate_limits.five_hour); ??% when absent, never faked full
 # 💰 Gold = 7-day rate-limit budget remaining; 󰑐 = reset in; ??% when absent, never faked full
-# 🕯️🔥☄️💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
+# 🕯️🧨🔥💥🌋 Buff = reasoning-effort power-up after class level, tier number + heat bar (E1→E5); JSON tier else $MAX_THINKING_TOKENS bucket; hidden when neither present
 # 📜 Log  = every statusline payload appended as JSONL to /tmp/statusline.log for monitoring
 #
 # settings.json: "statusLine": { "type": "command", "command": "~/.claude/scripts/rpg-statusline.sh" }
@@ -406,8 +406,8 @@ effort_icon=""
 effort_color=""
 case "$effort_tier" in
     low)    effort_n=1; effort_icon="🕯️"; effort_color="$DIMGOLD" ;;
-    medium) effort_n=2; effort_icon="🔥"; effort_color="$YELLOW" ;;
-    high)   effort_n=3; effort_icon="☄️"; effort_color="$ORANGE" ;;
+    medium) effort_n=2; effort_icon="🧨"; effort_color="$YELLOW" ;;
+    high)   effort_n=3; effort_icon="🔥"; effort_color="$ORANGE" ;;
     xhigh)  effort_n=4; effort_icon="💥"; effort_color="$RED" ;;
     max)    effort_n=5; effort_icon="🌋"; effort_color="$GOLD" ;;
 esac
