@@ -377,7 +377,7 @@ if [ -z "$effort_tier" ]; then
         # global top-level effortLevel only when no per-model entry matches.
         effort_tier="$(jq -r --arg mid "$model_id" '
             (.modelSettings // {}) as $ms
-            | ($ms | keys[] | select($mid | startswith(.))) as $k
+            | ($ms | keys[] | select(. as $k | $mid | startswith($k))) as $k
             | $ms[$k].effortLevel // empty
         ' "$settings_file" 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]')"
         [ -z "$effort_tier" ] && effort_tier="$(jq -r '.effortLevel // empty' "$settings_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
