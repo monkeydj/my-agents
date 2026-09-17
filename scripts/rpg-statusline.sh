@@ -16,6 +16,25 @@ set -euo pipefail
 BAR_WIDTH=10
 DEFAULT_CTX_WINDOW=200000    # standard context window, tokens
 
+NARROW_COLS=${NARROW_COLS:-100}              # below this width, drop the optional segments
+
+# ----- Terminal width -----------------------------------------------------
+# The statusline payload carries no width, and our stdout is captured (not a
+# tty), so tput would only report its 80-column fallback. The real size comes
+# from the tty device owned by the parent claude process. 0 = undetectable,
+# which keeps the full layout rather than guessing narrow.
+term_cols() {
+    local t
+    case "${COLUMNS:-0}" in ''|*[!0-9]*) : ;; *) if [ "$COLUMNS" -gt 0 ]; then printf '%s' "$COLUMNS"; return; fi ;; esac
+    t="$(ps -o tty= -p "$PPID" 2>/dev/null | tr -d ' ')"
+    case "$t" in ''|'??') printf '0'; return ;; esac
+    stty -f "/dev/$t" size 2>/dev/null | awk '{print $2+0}' || printf '0'
+}
+cols="$(term_cols)"
+case "$cols" in ''|*[!0-9]*) cols=0 ;; esac
+narrow=0
+if [ "$cols" -gt 0 ] && [ "$cols" -lt "$NARROW_COLS" ]; then narrow=1; fi
+
 # ----- Resolve Claude config directory (once) -------------------------------
 # Expects <claude-dir>/scripts/rpg-statusline.sh so the grandparent is the
 # claude root (e.g. ~/.claude or a custom profile dir). Falls back to ~/.claude
@@ -332,8 +351,10 @@ else
         "$GOLD" "$BOLD" "$RESET" \
         "$(render_bar 0 "$GREY")" "$GREY" "$RESET"
 fi
-[ -n "$py" ]   && printf '%s%s' "$SEP" && printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"
-[ -n "$node" ] && printf '%s%s' "$SEP" && printf '%s🕷️ %s%s' "$M_MOSS" "$node" "$RESET"
+if [ "$narrow" -eq 0 ]; then
+    if [ -n "$py" ];   then printf '%s' "$SEP"; printf '%s%s %s%s' "$M_PYTHON" "$PY_ICON" "$py" "$RESET"; fi
+    if [ -n "$node" ]; then printf '%s' "$SEP"; printf '%s🕷️ %s%s' "$M_MOSS" "$node" "$RESET"; fi
+fi
 printf '\n'
 
 # ----- Line 2: context — class → dir → git-tokens → branch -----------------
@@ -401,7 +422,7 @@ segs=()
 segs+=("$(printf '%s%s %s%s%s %slv.%s%s%s' \
     "$PURPLE" "$class_icon" "$BOLD" "$class_short" "$RESET" "$DIM$PURPLE" "$model_level" "$RESET" \
     "${effort_buff:+ $effort_buff}")")
-segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")")
+if [ "$narrow" -eq 0 ]; then segs+=("$(printf '%s%s %s%s' "$M_SLATE" "$dir_icon" "$(shorten_path "$cwd")" "$RESET")"); fi
 if [ -n "$branch" ]; then
     branch_color="$M_SAGE"
     [ $(( staged + unstaged + untracked )) -gt 0 ] && branch_color="$M_RUST"
