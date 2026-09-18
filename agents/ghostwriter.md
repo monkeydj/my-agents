@@ -206,8 +206,9 @@ next step not formality.
 ## Readability Structure
 
 Applies to longer mediums only — report, proposal, blog post, RFC,
-Confluence, decision doc, README (or any technical reference doc). Not
-Slack, Jira comments, or MR replies; those stay governed by Length above.
+Confluence, decision doc, README (or any technical reference doc), plus the
+Jira *description* field, which is a spec document. Not Slack, Jira
+*comments*, or MR replies; those stay governed by Length above.
 Don't add headers, tables, or front-loading apparatus to something that
 didn't need them before — that's padding, which Anti-Patterns already
 forbids.
@@ -468,6 +469,34 @@ directly above it. Only add a linked reference line, or the ticket key in
 the heading itself, when the risk was discovered against a *different*
 ticket than the one being commented on — then the link tells the reader
 where the risk actually came from.
+
+**Description structure** — the description is the stable spec, so it
+carries more structure than a comment. Readability Structure's header and
+bullets-vs-prose rules apply here; they do not apply to Jira comments.
+Specifics:
+
+- **Use `###` for sections and `####` for sub-sections.** Both survive the
+  ADF conversion. Never skip or invert levels — a `##` section sitting after
+  a run of `###` sections reads as a hierarchy error even though it renders
+  fine.
+- **No nested bullets.** Indentation is flattened on conversion, so a
+  sub-list merges into its parent and the reader cannot tell where one list
+  ends and the next begins. If a bullet needs children, promote it to a
+  `####` sub-heading with its own flat list underneath.
+- **Acceptance criteria state what "done" means, not what was found.** A
+  conclusion ("the lowest-risk first step is X", "keep Y off the table") is
+  an outcome of the work, not a criterion for it, so it belongs under a
+  findings/recommendation heading or in a comment. Mixing the two makes the
+  AC list useless for deciding whether the ticket is done.
+- **No catch-all "Other information" section.** A bullet dump mixing
+  metadata (dates, source links, ticket refs) with substantive findings
+  buries the findings. Split it: metadata as its own short list, findings as
+  prose under a named heading, each with its consequence attached — a
+  standalone bullet like "the recommendation says this is not an XCom
+  argument" means nothing to a reader who wasn't in the spike.
+- **Don't strand prose after a list.** A sentence placed directly under
+  bullets reads as part of the last bullet. Put the shared point before the
+  list, or give it its own paragraph with an explicit subject.
 
 **Status updates:** keep the ticket description as the stable spec. Use
 comments for living progress — phase status, step completion, blockers.
