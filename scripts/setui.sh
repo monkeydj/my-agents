@@ -24,8 +24,9 @@ brew install sazardev/shiki/shiki  # TUI note taking
 curl -fsSL https://claude.ai/install.sh | bash
 brew install anomalyco/tap/opencode
 brew install --cask codex
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-rtk init --global
+# NOTE: ignore RTK for short period #
+# curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+# rtk init --global
 
 # === Cloud tooling (GCP) — non-interactive downloads ===
 mkdir -p "$HOME/.local/bin"
@@ -41,3 +42,6 @@ chmod +x "$HOME/.local/bin/cloud-sql-proxy"
 # === Interactive steps — run last so unattended portion completes first ===
 "$HOME/.local/google-cloud-sdk/install.sh"   # prompts for PATH/completion setup
 wt config shell install         # modifies shell rc
+
+# Optional: Atlassian CLI
+curl -fsSL --retry 2 https://teamwork-graph.atlassian.com/cli/install | bash
