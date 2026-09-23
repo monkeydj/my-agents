@@ -19,6 +19,7 @@ brew install httpie
 brew install zoxide
 brew install fzf
 brew install sazardev/shiki/shiki  # TUI note taking
+npm install -g @tobilu/qmd  # ? if belong to this category
 
 # === AI agents ===
 curl -fsSL https://claude.ai/install.sh | bash
